@@ -72,20 +72,63 @@
   </style>
 </head>
 <body>
-  <div class="center-box">
+  <div class="center-box" id="step1">
     <h1>tmrflip</h1>
-    <p>Enter your name and game code to join</p>
+    <p>Enter your name (e.g. Namya)</p>
     <input type="text" id="nameInput" class="input" placeholder="Enter your name" />
-    <input type="text" id="codeInput" class="input" placeholder="Enter game code or leave blank to create" />
     <br>
-    <button class="btn" onclick="startGame()">Continue</button>
+    <button class="btn" onclick="goToStep2()">Next</button>
+  </div>
+
+  <div class="center-box" id="step2" style="display: none;">
+    <h1>tmrflip</h1>
+    <p>Create a new game or join a code</p>
+    <button class="btn" onclick="createCode()">Create Game</button>
+    <button class="btn" onclick="showJoinInput()">Join Code</button>
+    <div id="joinBox" style="margin-top: 20px; display: none;">
+      <input type="text" id="codeInput" class="input" placeholder="Enter 9-digit code (e.g. 532-535-635)" />
+      <br>
+      <button class="btn" onclick="joinGame()">Join</button>
+    </div>
   </div>
 
   <script>
-    function startGame() {
-      const name = document.getElementById('nameInput').value || 'Player';
-      const code = document.getElementById('codeInput').value || Math.random().toString(36).substr(2, 4).toUpperCase();
-      window.location.href = `waiting.html?code=${code}&name=${encodeURIComponent(name)}`;
+    let playerName = "";
+
+    function goToStep2() {
+      const name = document.getElementById("nameInput").value.trim();
+      if (!name) return alert("Please enter your name");
+      playerName = name;
+      document.getElementById("step1").style.display = "none";
+      document.getElementById("step2").style.display = "block";
+    }
+
+    function createCode() {
+      const code = generateGameCode();
+      const fullLink = `${window.location.origin}/waiting.html?code=${code}&name=${encodeURIComponent(playerName)}`;
+      navigator.clipboard.writeText(fullLink);
+      alert("Game link copied! Share this: " + fullLink);
+      window.location.href = fullLink;
+    }
+
+    function showJoinInput() {
+      document.getElementById("joinBox").style.display = "block";
+    }
+
+    function joinGame() {
+      const codeInput = document.getElementById("codeInput").value.trim().replace(/[^0-9]/g, "");
+      if (codeInput.length !== 9) return alert("Enter a valid 9-digit code");
+      const formattedCode = `${codeInput.slice(0,3)}-${codeInput.slice(3,6)}-${codeInput.slice(6)}`;
+      window.location.href = `waiting.html?code=${formattedCode}&name=${encodeURIComponent(playerName)}`;
+    }
+
+    function generateGameCode() {
+      const parts = [];
+      for (let i = 0; i < 3; i++) {
+        parts.push(Math.floor(100 + Math.random() * 900));
+      }
+      return parts.join("-");
     }
   </script>
-</
+</body>
+</html>
