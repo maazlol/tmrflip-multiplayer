@@ -8,15 +8,30 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+const gameRooms = {};
 
-  socket.on('play-card', (data) => {
-    socket.broadcast.emit('card-played', data);
+io.on('connection', (socket) => {
+  socket.on('join-game', ({ name, code }) => {
+    socket.join(code);
+
+    if (!gameRooms[code]) {
+      gameRooms[code] = [];
+    }
+
+    gameRooms[code].push({ id: socket.id, name });
+  });
+
+  socket.on('chat-message', ({ code, name, message }) => {
+    io.to(code).emit('chat-message', { name, message });
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    for (const code in gameRooms) {
+      gameRooms[code] = gameRooms[code].filter(p => p.id !== socket.id);
+      if (gameRooms[code].length === 0) {
+        delete gameRooms[code];
+      }
+    }
   });
 });
 
