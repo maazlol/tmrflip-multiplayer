@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TmrFlip Waiting Room</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #fff;
+      color: #111;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        #ffffff 0px,
+        #ffffff 29px,
+        #ccc 30px
+      );
+    }
+
+    h1 {
+      color: #222;
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    #welcomeText {
+      text-align: center;
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+    }
+
+    .copy-section {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .code {
+      display: inline-block;
+      padding: 8px 16px;
+      font-size: 1.1rem;
+      background-color: #eee;
+      border: 1px dashed #333;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .code:hover {
+      background-color: #ddd;
+    }
+
+    #players {
+      margin: 20px auto;
+      font-size: 1rem;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .chat {
+      margin: 20px auto;
+      max-width: 500px;
+      padding: 15px;
+      border: 1px solid #aaa;
+      border-radius: 12px;
+      background: #f8f8f8;
+      height: 200px;
+      overflow-y: auto;
+      font-size: 0.95rem;
+    }
+
+    .chat-input {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .chat-input input {
+      padding: 8px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #999;
+      width: 70%;
+    }
+
+    .chat-input button {
+      padding: 8px 14px;
+      font-size: 1rem;
+      background-color: #222;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .chat-input button:hover {
+      background-color: #444;
+    }
+
+    .discord {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #5865F2;
+      padding: 12px 20px;
+      border-radius: 15px;
+      text-decoration: none;
+      color: white;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      box-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
+    }
+
+    .discord img {
+      width: 20px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>TmrFlip Waiting Room</h1>
+  <p id="welcomeText"></p>
+  <div class="copy-section">
+    <p>Share this game link with your friend:</p>
+    <div class="code" id="copyLink" onclick="copyGameLink()">Copy Game Link</div>
+  </div>
+
+  <div id="players"></div>
+
+  <div class="chat" id="chatBox"></div>
+  <div class="chat-input">
+    <input type="text" id="chatInput" placeholder="Type a message...">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <a class="discord" href="https://discord.gg/znceQfMRUT" target="_blank">
+    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord Icon" />
+    Join our Discord
+  </a>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    window.onload = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const name = urlParams.get('name') || 'Player';
+      const code = urlParams.get('code') || 'UNKNOWN';
+      const link = `${window.location.origin}/waiting.html?code=${code}&name=${encodeURIComponent(name)}`;
+
+      const socket = io();
+      document.getElementById('welcomeText').innerText = `${name}, your game is almost ready!`;
+
+      socket.emit('join-game', { name, code });
+
+      socket.on('player-list', (players) => {
+        const list = document.getElementById('players');
+        const host = players[0];
+        const others = players.slice(1);
+        list.innerHTML = `<strong>Host:</strong> ${host || 'Unknown'}<br><br>` +
+          '<strong>Players Joined:</strong><br>' +
+          others.map(p => '• ' + p).join('<br>');
+      });
+
+      socket.on('chat-message', ({ name, message }) => {
+        const box = document.getElementById('chatBox');
+        const msg = document.createElement('div');
+        msg.innerHTML = `<strong>${name}:</strong> ${message}`;
+        box.appendChild(msg);
+        box.scrollTop = box.scrollHeight;
+      });
+
+      window.sendMessage = function() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        if (message) {
+          socket.emit('chat-message', { code, name, message });
+          input.value = '';
+        }
+      }
+
+      window.copyGameLink = function() {
+        navigator.clipboard.writeText(link);
+        const btn = document.getElementById('copyLink');
+        btn.innerText = 'Copied!';
+        setTimeout(() => btn.innerText = 'Copy Game Link', 2000);
+      }
+    };
+  </script>
+</body>
+</html>
