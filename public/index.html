@@ -106,8 +106,6 @@
     function createCode() {
       const code = generateGameCode();
       const fullLink = `${window.location.origin}/waiting.html?code=${code}&name=${encodeURIComponent(playerName)}`;
-      navigator.clipboard.writeText(fullLink);
-      alert("Game link copied! Share this: " + fullLink);
       window.location.href = fullLink;
     }
 
@@ -129,6 +127,20 @@
       }
       return parts.join("-");
     }
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        const step1Visible = document.getElementById("step1").style.display !== "none";
+        const step2Visible = document.getElementById("step2").style.display !== "none";
+        const joinBoxVisible = document.getElementById("joinBox").style.display !== "none";
+
+        if (step1Visible) {
+          goToStep2();
+        } else if (step2Visible && joinBoxVisible) {
+          joinGame();
+        }
+      }
+    });
   </script>
 </body>
 </html>
