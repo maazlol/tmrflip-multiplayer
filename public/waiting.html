@@ -8,64 +8,74 @@
     body {
       margin: 0;
       padding: 20px;
-      background-color: #fff;
-      color: #111;
+      background-color: #000;
+      color: white;
       font-family: 'Comic Sans MS', cursive, sans-serif;
-      background-image: repeating-linear-gradient(
-        to bottom,
-        #ffffff 0px,
-        #ffffff 29px,
-        #ccc 30px
-      );
+      text-align: center;
     }
 
     h1 {
-      color: #222;
-      font-size: 2.5rem;
-      text-align: center;
+      font-size: 3rem;
       margin-bottom: 10px;
     }
 
     #welcomeText {
-      text-align: center;
       font-size: 1.2rem;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
 
     .copy-section {
-      text-align: center;
-      margin-bottom: 20px;
+      margin-bottom: 25px;
     }
 
     .code {
       display: inline-block;
-      padding: 8px 16px;
-      font-size: 1.1rem;
-      background-color: #eee;
-      border: 1px dashed #333;
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: transparent;
+      border: 2px dashed white;
       border-radius: 10px;
       cursor: pointer;
-      margin-top: 8px;
     }
 
     .code:hover {
-      background-color: #ddd;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    #playerBox {
+      width: 100%;
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 20px;
+      border: 2px dashed white;
+      border-radius: 10px;
+      text-align: center;
+      overflow-y: auto;
+      max-height: 300px;
     }
 
     #players {
-      margin: 20px auto;
       font-size: 1rem;
-      max-width: 400px;
-      text-align: center;
+    }
+
+    #startBtn {
+      display: none;
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: 2px dashed white;
+      border-radius: 10px;
+      background-color: transparent;
+      color: white;
+      cursor: pointer;
     }
 
     .chat {
-      margin: 20px auto;
       max-width: 500px;
+      margin: 20px auto;
       padding: 15px;
-      border: 1px solid #aaa;
+      border: 2px dashed white;
       border-radius: 12px;
-      background: #f8f8f8;
       height: 200px;
       overflow-y: auto;
       font-size: 0.95rem;
@@ -82,54 +92,93 @@
       padding: 8px;
       font-size: 1rem;
       border-radius: 6px;
-      border: 1px solid #999;
+      border: 1px solid #fff;
+      background: transparent;
+      color: white;
       width: 70%;
     }
 
     .chat-input button {
       padding: 8px 14px;
       font-size: 1rem;
-      background-color: #222;
+      background-color: transparent;
       color: white;
-      border: none;
+      border: 2px dashed #fff;
       border-radius: 6px;
       cursor: pointer;
     }
 
     .chat-input button:hover {
-      background-color: #444;
+      background-color: rgba(255,255,255,0.1);
     }
 
-    .discord {
+    .discord-icon {
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background-color: #5865F2;
-      padding: 12px 20px;
-      border-radius: 15px;
-      text-decoration: none;
-      color: white;
-      font-size: 1rem;
-      display: flex;
-      align-items: center;
-      box-shadow: 0 0 10px rgba(88, 101, 242, 0.5);
+      width: 40px;
     }
 
-    .discord img {
-      width: 20px;
-      margin-right: 10px;
+    .discord-icon img {
+      width: 100%;
+      filter: grayscale(100%) brightness(150%);
+    }
+
+    #namePrompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0,0,0,0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      z-index: 999;
+    }
+
+    #namePrompt input {
+      padding: 10px;
+      font-size: 1rem;
+      border: 2px dashed white;
+      border-radius: 10px;
+      background: transparent;
+      color: white;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    #namePrompt button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background: transparent;
+      border: 2px dashed white;
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>TmrFlip Waiting Room</h1>
+  <div id="namePrompt" style="display: none;">
+    <h2>Enter your name to join</h2>
+    <input type="text" id="promptNameInput" placeholder="Your name">
+    <button onclick="submitName()">Join</button>
+  </div>
+
+  <h1>tmrflip</h1>
   <p id="welcomeText"></p>
+
   <div class="copy-section">
     <p>Share this game link with your friend:</p>
     <div class="code" id="copyLink" onclick="copyGameLink()">Copy Game Link</div>
   </div>
 
-  <div id="players"></div>
+  <div id="playerBox">
+    <div id="players"></div>
+    <button id="startBtn" onclick="startGame()">Start Game</button>
+  </div>
 
   <div class="chat" id="chatBox"></div>
   <div class="chat-input">
@@ -137,19 +186,35 @@
     <button onclick="sendMessage()">Send</button>
   </div>
 
-  <a class="discord" href="https://discord.gg/znceQfMRUT" target="_blank">
-    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord Icon" />
-    Join our Discord
+  <a class="discord-icon" href="https://discord.gg/znceQfMRUT" target="_blank">
+    <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord" />
   </a>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    function submitName() {
+      const input = document.getElementById('promptNameInput');
+      const name = input.value.trim();
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (name && code) {
+        window.location.href = `waiting.html?code=${code}&name=${encodeURIComponent(name)}`;
+      } else {
+        alert('Please enter your name');
+      }
+    }
+
     window.onload = () => {
       const urlParams = new URLSearchParams(window.location.search);
-      const name = urlParams.get('name') || 'Player';
-      const code = urlParams.get('code') || 'UNKNOWN';
-      const link = `${window.location.origin}/waiting.html?code=${code}&name=${encodeURIComponent(name)}`;
+      let name = urlParams.get('name');
+      const code = urlParams.get('code');
 
+      if (!name) {
+        document.getElementById('namePrompt').style.display = 'flex';
+        return;
+      }
+
+      const link = `${window.location.origin}/waiting.html?code=${code}&name=${encodeURIComponent(name)}`;
       const socket = io();
       document.getElementById('welcomeText').innerText = `${name}, your game is almost ready!`;
 
@@ -162,6 +227,14 @@
         list.innerHTML = `<strong>Host:</strong> ${host || 'Unknown'}<br><br>` +
           '<strong>Players Joined:</strong><br>' +
           others.map(p => '• ' + p).join('<br>');
+
+        const isHost = (name === host);
+        const startBtn = document.getElementById('startBtn');
+        if (isHost && players.length >= 2 && players.length <= 10) {
+          startBtn.style.display = 'block';
+        } else {
+          startBtn.style.display = 'none';
+        }
       });
 
       socket.on('chat-message', ({ name, message }) => {
@@ -170,6 +243,11 @@
         msg.innerHTML = `<strong>${name}:</strong> ${message}`;
         box.appendChild(msg);
         box.scrollTop = box.scrollHeight;
+      });
+
+      const chatInput = document.getElementById('chatInput');
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
       });
 
       window.sendMessage = function() {
@@ -186,6 +264,10 @@
         const btn = document.getElementById('copyLink');
         btn.innerText = 'Copied!';
         setTimeout(() => btn.innerText = 'Copy Game Link', 2000);
+      }
+
+      window.startGame = function() {
+        socket.emit('start-game', { code });
       }
     };
   </script>
