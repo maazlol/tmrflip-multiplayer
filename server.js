@@ -189,6 +189,9 @@ function startGame(code) {
     topCard,
     currentTurn: game.players[game.turnIndex]
   });
+
+  // ✅ This is the fix that triggers the redirect to game.html
+  io.to(code).emit('deal-hand');
 }
 
 http.listen(PORT, () => {
