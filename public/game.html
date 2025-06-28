@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TmrFlip Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    #gameArea {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 1200px;
+      flex: 1;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+      width: 120px;
+    }
+
+    .player {
+      position: relative;
+      border: 2px dashed white;
+      padding: 10px;
+      border-radius: 10px;
+      width: 100px;
+      text-align: center;
+      background-color: #111;
+    }
+
+    .player-name {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      color: #ff0;
+    }
+
+    .card-backs {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 25px;
+    }
+
+    .card-back {
+      width: 30px;
+      height: 45px;
+      background: white;
+      border-radius: 5px;
+    }
+
+    .extra-cards {
+      margin-top: 5px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    #myCards {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 30px;
+    }
+
+    .my-card {
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: #fff;
+      color: #000;
+      min-width: 60px;
+      text-align: center;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>TmrFlip Game</h1>
+
+  <div id="gameArea">
+    <div class="side" id="leftPlayers"></div>
+    <div class="side" id="rightPlayers"></div>
+  </div>
+
+  <div id="myCards"></div>
+
+  <script>
+    const otherPlayers = [
+      { name: 'Nimra', cards: 6 },
+      { name: 'Ahmed', cards: 3 },
+      { name: 'Sara', cards: 1 },
+      { name: 'Ali', cards: 4 }
+    ];
+
+    const yourCards = ['🔴 7', '🟡 Skip', '🔵 +2'];
+
+    function renderPlayers() {
+      const left = document.getElementById('leftPlayers');
+      const right = document.getElementById('rightPlayers');
+      left.innerHTML = '';
+      right.innerHTML = '';
+
+      const mid = Math.ceil(otherPlayers.length / 2);
+      const leftSide = otherPlayers.slice(0, mid);
+      const rightSide = otherPlayers.slice(mid);
+
+      [...leftSide, ...rightSide].forEach((player, i) => {
+        const playerBox = document.createElement('div');
+        playerBox.className = 'player';
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'player-name';
+        nameEl.innerText = player.name;
+        playerBox.appendChild(nameEl);
+
+        const cardContainer = document.createElement('div');
+        cardContainer.className = 'card-backs';
+
+        const cardCount = Math.min(player.cards, 3);
+        for (let i = 0; i < cardCount; i++) {
+          const card = document.createElement('div');
+          card.className = 'card-back';
+          cardContainer.appendChild(card);
+        }
+
+        playerBox.appendChild(cardContainer);
+
+        if (player.cards > 3) {
+          const extra = document.createElement('div');
+          extra.className = 'extra-cards';
+          extra.innerText = `+${player.cards - 3} more`;
+          playerBox.appendChild(extra);
+        }
+
+        if (i < mid) {
+          left.appendChild(playerBox);
+        } else {
+          right.appendChild(playerBox);
+        }
+      });
+    }
+
+    function renderMyCards() {
+      const container = document.getElementById('myCards');
+      container.innerHTML = '';
+      yourCards.forEach(card => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'my-card';
+        cardEl.innerText = card;
+        container.appendChild(cardEl);
+      });
+    }
+
+    renderPlayers();
+    renderMyCards();
+  </script>
+</body>
+</html>
