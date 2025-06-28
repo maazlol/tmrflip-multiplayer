@@ -42,6 +42,24 @@ io.on('connection', (socket) => {
     io.to(code).emit('player-list', games[code].players);
   });
 
+  socket.on('joinGameRoom', ({ name, room }) => {
+    const game = games[room];
+    if (!game || !game.started) return;
+
+    socket.join(room);
+    socket.code = room;
+    socket.name = name;
+
+    io.to(room).emit('gameState', {
+      players: game.players.map(n => ({
+        name: n,
+        hand: game.hands[n]
+      })),
+      topCard: game.topCard,
+      currentTurn: game.players[game.turnIndex]
+    });
+  });
+
   socket.on('start-game', ({ code, name }) => {
     const game = games[code];
     if (!game || game.started) return;
@@ -82,13 +100,13 @@ io.on('connection', (socket) => {
       (game.turnIndex + (skipNext ? 2 : 1) * game.direction + game.players.length) %
       game.players.length;
 
-    const nextTurn = game.players[game.turnIndex];
-
-    io.to(code).emit('update-game', {
-      hands: game.hands,
+    io.to(code).emit('gameState', {
+      players: game.players.map(n => ({
+        name: n,
+        hand: game.hands[n]
+      })),
       topCard: game.topCard,
-      currentTurn: nextTurn,
-      lastMove: { name, card },
+      currentTurn: game.players[game.turnIndex]
     });
   });
 
@@ -103,13 +121,13 @@ io.on('connection', (socket) => {
     game.turnIndex =
       (game.turnIndex + game.direction + game.players.length) % game.players.length;
 
-    const nextTurn = game.players[game.turnIndex];
-
-    io.to(code).emit('update-game', {
-      hands: game.hands,
+    io.to(code).emit('gameState', {
+      players: game.players.map(n => ({
+        name: n,
+        hand: game.hands[n]
+      })),
       topCard: game.topCard,
-      currentTurn: nextTurn,
-      lastMove: { name, card: 'Drew a card' },
+      currentTurn: game.players[game.turnIndex]
     });
   });
 
@@ -160,10 +178,13 @@ function startGame(code) {
   game.turnIndex = 0;
   game.direction = 1;
 
-  io.to(code).emit('deal-hand', {
-    hands,
+  io.to(code).emit('gameState', {
+    players: game.players.map(n => ({
+      name: n,
+      hand: hands[n]
+    })),
     topCard,
-    currentTurn: game.players[game.turnIndex],
+    currentTurn: game.players[game.turnIndex]
   });
 }
 
