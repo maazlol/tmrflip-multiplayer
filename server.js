@@ -42,21 +42,6 @@ io.on('connection', (socket) => {
     io.to(code).emit('player-list', games[code].players);
   });
 
-  socket.on('gameReadyConfirm', ({ name, room }) => {
-    const game = games[room];
-    if (!game || game.readyPlayers.includes(name)) return;
-
-    game.readyPlayers.push(name);
-    io.to(room).emit('updateReadyStatus', {
-      readyPlayers: game.readyPlayers,
-      totalPlayers: game.players.length,
-    });
-
-    if (game.readyPlayers.length === game.players.length) {
-      startGame(room);
-    }
-  });
-
   socket.on('start-game', ({ code, name }) => {
     const game = games[code];
     if (!game || game.started) return;
