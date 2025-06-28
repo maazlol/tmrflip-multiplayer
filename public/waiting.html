@@ -136,21 +136,6 @@
     #mainContent {
       display: none;
     }
-    #readyBtn {
-      padding: 10px 20px;
-      font-size: 1rem;
-      border: 2px dashed white;
-      border-radius: 10px;
-      background-color: transparent;
-      color: white;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    #readyStatus {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      color: #aaa;
-    }
   </style>
 </head>
 <body>
@@ -169,8 +154,6 @@
     <div id="playerBox">
       <div id="players"></div>
       <button id="startBtn" onclick="startGame()">Start Game</button>
-      <button id="readyBtn" onclick="markReady()">Ready</button>
-      <div id="readyStatus"></div>
     </div>
     <div class="chat" id="chatBox"></div>
     <div class="chat-input">
@@ -251,16 +234,6 @@
         box.scrollTop = box.scrollHeight;
       });
 
-      socket.on('updateReadyStatus', ({ readyPlayers, totalPlayers }) => {
-        const text = `${readyPlayers.length}/${totalPlayers} ready`;
-        document.getElementById('readyStatus').innerText = text;
-      });
-
-      socket.on('allPlayersConfirmed', () => {
-        const gameUrl = `${window.location.origin}/game.html?code=${code}&name=${encodeURIComponent(name)}`;
-        window.location.href = gameUrl;
-      });
-
       socket.on('deal-hand', () => {
         const gameUrl = `${window.location.origin}/game.html?code=${code}&name=${encodeURIComponent(name)}`;
         window.location.href = gameUrl;
@@ -290,11 +263,7 @@
     }
 
     function startGame() {
-      socket.emit('start-game', { code });
-    }
-
-    function markReady() {
-      socket.emit('gameReadyConfirm', { name, room: code });
+      socket.emit('start-game', { code, name });
     }
   </script>
 </body>
