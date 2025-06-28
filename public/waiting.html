@@ -214,12 +214,16 @@
 
     function initSocket() {
       document.getElementById('mainContent').style.display = 'block';
-      const link = `${window.location.origin}/waiting.html?code=${code}`;
 
       socket = io();
       document.getElementById('welcomeText').innerText = `${name}, your game is almost ready!`;
 
       socket.emit('join-game', { name, code });
+
+      socket.on('name-taken', () => {
+        alert("This name is already taken in the room.");
+        window.location.href = `/waiting.html?code=${code}`;
+      });
 
       socket.on('player-list', (players) => {
         const list = document.getElementById('players');
