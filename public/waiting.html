@@ -235,6 +235,8 @@
       });
 
       socket.on('deal-hand', () => {
+        localStorage.setItem("tmrflip-name", name);
+        localStorage.setItem("tmrflip-room", code);
         const gameUrl = `${window.location.origin}/game.html?code=${code}&name=${encodeURIComponent(name)}`;
         window.location.href = gameUrl;
       });
