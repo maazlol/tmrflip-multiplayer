@@ -53,52 +53,20 @@ io.on('connection', (socket) => {
     });
 
     if (game.readyPlayers.length === game.players.length) {
-      game.started = true;
-
-      const hands = {};
-      for (const player of game.players) {
-        hands[player] = drawCards(3);
-      }
-
-      const topCard = drawCards(1)[0];
-
-      game.hands = hands;
-      game.topCard = topCard;
-      game.turnIndex = 0;
-      game.direction = 1;
-
-      io.to(room).emit('allPlayersConfirmed');
-      io.to(room).emit('deal-hand', {
-        hands,
-        topCard,
-        currentTurn: game.players[game.turnIndex],
-      });
+      startGame(room);
     }
   });
 
-  socket.on('start-game', ({ code }) => {
+  socket.on('start-game', ({ code, name }) => {
     const game = games[code];
     if (!game || game.started) return;
 
-    game.started = true;
-
-    const hands = {};
-    for (const player of game.players) {
-      hands[player] = drawCards(3);
+    if (game.players[0] !== name) {
+      socket.emit('error-message', 'Only host can start the game.');
+      return;
     }
 
-    const topCard = drawCards(1)[0];
-
-    game.hands = hands;
-    game.topCard = topCard;
-    game.turnIndex = 0;
-    game.direction = 1;
-
-    io.to(code).emit('deal-hand', {
-      hands,
-      topCard,
-      currentTurn: game.players[game.turnIndex],
-    });
+    startGame(code);
   });
 
   socket.on('play-card', ({ code, name, card }) => {
@@ -189,6 +157,29 @@ function drawCards(count) {
     cards.push(pool[Math.floor(Math.random() * pool.length)]);
   }
   return cards;
+}
+
+function startGame(code) {
+  const game = games[code];
+  if (!game) return;
+
+  game.started = true;
+  const hands = {};
+  for (const player of game.players) {
+    hands[player] = drawCards(3);
+  }
+
+  const topCard = drawCards(1)[0];
+  game.hands = hands;
+  game.topCard = topCard;
+  game.turnIndex = 0;
+  game.direction = 1;
+
+  io.to(code).emit('deal-hand', {
+    hands,
+    topCard,
+    currentTurn: game.players[game.turnIndex],
+  });
 }
 
 http.listen(PORT, () => {
