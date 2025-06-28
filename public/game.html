@@ -51,10 +51,6 @@
       transition: transform 0.3s ease;
     }
 
-    .player:hover {
-      transform: scale(1.05);
-    }
-
     .player-name {
       position: absolute;
       top: 5px;
@@ -112,6 +108,23 @@
       box-shadow: 0 4px 10px rgba(255,255,255,0.3);
     }
 
+    #drawBtn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: 2px dashed white;
+      border-radius: 10px;
+      background-color: transparent;
+      color: white;
+      cursor: pointer;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 1.2rem;
+      color: #0f0;
+    }
+
     @keyframes flipIn {
       from {
         transform: rotateY(90deg);
@@ -126,83 +139,100 @@
 </head>
 <body>
   <h1>TmrFlip Game</h1>
-
+  <div id="status"></div>
   <div id="gameArea">
     <div class="side" id="leftPlayers"></div>
     <div class="side" id="rightPlayers"></div>
   </div>
-
   <div id="myCards"></div>
+  <button id="drawBtn">Draw Card</button>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script>
-    const otherPlayers = [
-      { name: 'Nimra', cards: 6 },
-      { name: 'Ahmed', cards: 3 },
-      { name: 'Sara', cards: 1 },
-      { name: 'Ali', cards: 4 }
-    ];
+    const socket = io();
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const name = urlParams.get('name');
 
-    const yourCards = ['🔴 7', '🟡 Skip', '🔵 +2'];
+    const myCardsContainer = document.getElementById('myCards');
+    const left = document.getElementById('leftPlayers');
+    const right = document.getElementById('rightPlayers');
+    const drawBtn = document.getElementById('drawBtn');
+    const statusText = document.getElementById('status');
 
-    function renderPlayers() {
-      const left = document.getElementById('leftPlayers');
-      const right = document.getElementById('rightPlayers');
+    let currentTurn = '';
+
+    drawBtn.addEventListener('click', () => {
+      socket.emit('draw-card', { code, name });
+    });
+
+    socket.emit('join-game', { name, code });
+
+    socket.on('deal-hand', ({ hands, topCard, currentTurn: turn }) => {
+      currentTurn = turn;
+      updateUI(hands);
+      statusText.innerText = `Top Card: ${topCard} | ${turn}'s Turn`;
+    });
+
+    socket.on('update-game', ({ hands, topCard, currentTurn: turn, lastMove }) => {
+      currentTurn = turn;
+      updateUI(hands);
+      statusText.innerText = `${lastMove.name} played ${lastMove.card}\nTop Card: ${topCard} | ${turn}'s Turn`;
+    });
+
+    socket.on('game-over', ({ winner }) => {
+      alert(`${winner} has won the game!`);
+      window.location.href = '/';
+    });
+
+    function updateUI(hands) {
+      myCardsContainer.innerHTML = '';
       left.innerHTML = '';
       right.innerHTML = '';
 
-      const mid = Math.ceil(otherPlayers.length / 2);
-      const leftSide = otherPlayers.slice(0, mid);
-      const rightSide = otherPlayers.slice(mid);
+      const allPlayers = Object.keys(hands);
+      const others = allPlayers.filter(p => p !== name);
 
-      [...leftSide, ...rightSide].forEach((player, i) => {
-        const playerBox = document.createElement('div');
-        playerBox.className = 'player';
-
+      others.forEach((player, i) => {
+        const side = (i < others.length / 2) ? left : right;
+        const box = document.createElement('div');
+        box.className = 'player';
         const nameEl = document.createElement('div');
         nameEl.className = 'player-name';
-        nameEl.innerText = player.name;
-        playerBox.appendChild(nameEl);
-
+        nameEl.innerText = player;
+        box.appendChild(nameEl);
         const cardContainer = document.createElement('div');
         cardContainer.className = 'card-backs';
-
-        const cardCount = Math.min(player.cards, 3);
-        for (let i = 0; i < cardCount; i++) {
-          const card = document.createElement('div');
-          card.className = 'card-back';
-          cardContainer.appendChild(card);
+        const cardCount = Math.min(hands[player].length, 3);
+        for (let j = 0; j < cardCount; j++) {
+          const c = document.createElement('div');
+          c.className = 'card-back';
+          cardContainer.appendChild(c);
         }
-
-        playerBox.appendChild(cardContainer);
-
-        if (player.cards > 3) {
+        box.appendChild(cardContainer);
+        if (hands[player].length > 3) {
           const extra = document.createElement('div');
           extra.className = 'extra-cards';
-          extra.innerText = `+${player.cards - 3} more`;
-          playerBox.appendChild(extra);
+          extra.innerText = `+${hands[player].length - 3} more`;
+          box.appendChild(extra);
         }
-
-        if (i < mid) {
-          left.appendChild(playerBox);
-        } else {
-          right.appendChild(playerBox);
-        }
+        side.appendChild(box);
       });
-    }
 
-    function renderMyCards() {
-      const container = document.getElementById('myCards');
-      container.innerHTML = '';
-      yourCards.forEach(card => {
+      hands[name].forEach(card => {
         const cardEl = document.createElement('div');
         cardEl.className = 'my-card';
         cardEl.innerText = card;
-        container.appendChild(cardEl);
+        cardEl.onclick = () => {
+          if (currentTurn === name) {
+            socket.emit('play-card', { code, name, card });
+          } else {
+            alert("It's not your turn!");
+          }
+        };
+        myCardsContainer.appendChild(cardEl);
       });
     }
-
-    renderPlayers();
-    renderMyCards();
   </script>
 </body>
 </html>
