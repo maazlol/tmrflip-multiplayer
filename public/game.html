@@ -14,13 +14,11 @@
       flex-direction: column;
       height: 100vh;
     }
-
     #layout {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
-
     #leftPlayers, #rightPlayers {
       width: 150px;
       padding: 10px;
@@ -29,7 +27,6 @@
       gap: 20px;
       justify-content: center;
     }
-
     #centerGame {
       flex: 1;
       display: flex;
@@ -38,7 +35,6 @@
       justify-content: center;
       position: relative;
     }
-
     .player-box {
       width: 120px;
       height: 150px;
@@ -51,7 +47,6 @@
       font-size: 12px;
       text-align: center;
     }
-
     .card-count {
       margin-top: 10px;
       background: white;
@@ -60,7 +55,6 @@
       padding: 4px 10px;
       font-weight: bold;
     }
-
     #topCard, #drawDeck {
       width: 100px;
       height: 140px;
@@ -74,12 +68,10 @@
       margin: 10px;
       border: 2px solid #333;
     }
-
     #drawDeck {
       background: #ccc;
       cursor: pointer;
     }
-
     #hand {
       display: flex;
       justify-content: center;
@@ -88,7 +80,6 @@
       overflow-x: auto;
       border-top: 2px solid #222;
     }
-
     .card {
       min-width: 60px;
       height: 90px;
@@ -103,7 +94,6 @@
       cursor: pointer;
       color: #000;
     }
-
     #status {
       text-align: center;
       padding: 5px;
@@ -113,22 +103,17 @@
 </head>
 <body>
   <div id="status">Connecting...</div>
-
   <div id="layout">
     <div id="leftPlayers"></div>
-
     <div id="centerGame">
       <div id="drawDeck">Deck</div>
       <div id="topCard">Top</div>
       <div id="hand"></div>
     </div>
-
     <div id="rightPlayers"></div>
   </div>
-
   <script>
     const socket = io();
-
     const urlParams = new URLSearchParams(window.location.search);
     let roomCode = urlParams.get("code");
     let playerName = urlParams.get("name");
@@ -154,15 +139,17 @@
     const rightPlayers = document.getElementById("rightPlayers");
 
     socket.emit("joinGameRoom", { name: playerName, room: roomCode });
+    console.log("EMITTED joinGameRoom", playerName, roomCode);
 
     socket.on("gameState", (state) => {
+      console.log("RECEIVED gameState", state);
+
       const player = state.players.find(p => p.name === playerName);
       if (!player) return;
 
-      // Top card
       topCardDiv.textContent = `${state.topCard.color} ${state.topCard.value}`;
+      console.log("Top card is:", state.topCard);
 
-      // Player hand
       handDiv.innerHTML = '';
       player.hand.forEach((card, index) => {
         const el = document.createElement("div");
@@ -177,11 +164,9 @@
         handDiv.appendChild(el);
       });
 
-      // Opponents
       const others = state.players.filter(p => p.name !== playerName);
       leftPlayers.innerHTML = '';
       rightPlayers.innerHTML = '';
-
       others.forEach((p, i) => {
         const box = document.createElement("div");
         box.className = "player-box";
@@ -190,12 +175,7 @@
         else rightPlayers.appendChild(box);
       });
 
-      // Status
-      if (state.currentTurn === playerName) {
-        statusDiv.textContent = "Your Turn";
-      } else {
-        statusDiv.textContent = `Waiting for ${state.currentTurn}...`;
-      }
+      statusDiv.textContent = state.currentTurn === playerName ? "Your Turn" : `Waiting for ${state.currentTurn}...`;
     });
 
     drawDeck.onclick = () => {
