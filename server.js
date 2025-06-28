@@ -71,6 +71,31 @@ io.on('connection', (socket) => {
     }
   });
 
+  socket.on('start-game', ({ code }) => {
+    const game = games[code];
+    if (!game || game.started) return;
+
+    game.started = true;
+
+    const hands = {};
+    for (const player of game.players) {
+      hands[player] = drawCards(3);
+    }
+
+    const topCard = drawCards(1)[0];
+
+    game.hands = hands;
+    game.topCard = topCard;
+    game.turnIndex = 0;
+    game.direction = 1;
+
+    io.to(code).emit('deal-hand', {
+      hands,
+      topCard,
+      currentTurn: game.players[game.turnIndex],
+    });
+  });
+
   socket.on('play-card', ({ code, name, card }) => {
     const game = games[code];
     if (!game || !game.started) return;
