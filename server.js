@@ -5,7 +5,6 @@ const io = require('socket.io')(http);
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-
 app.use(express.static(path.join(__dirname, 'public')));
 
 let games = {};
@@ -13,20 +12,23 @@ let games = {};
 io.on('connection', (socket) => {
   socket.on('join-game', ({ name, code }) => {
     if (!games[code]) {
-      games[code] = { players: [], started: false };
+      games[code] = { players: [], hands: {}, started: false };
     }
 
-    if (games[code].players.includes(name)) {
+    const game = games[code];
+
+    if (game.players.find(p => p.name === name)) {
       socket.emit('name-taken');
       return;
     }
 
-    games[code].players.push(name);
-    socket.join(code);
+    const player = { id: socket.id, name };
+    game.players.push(player);
     socket.code = code;
     socket.name = name;
+    socket.join(code);
 
-    io.to(code).emit('player-list', games[code].players);
+    io.to(code).emit('player-list', game.players.map(p => p.name));
   });
 
   socket.on('start-game', ({ code }) => {
@@ -35,27 +37,39 @@ io.on('connection', (socket) => {
 
     game.started = true;
 
-    const hands = {};
     for (const player of game.players) {
-      hands[player] = drawCards(3); // basic 3 cards per player
+      const hand = drawCards(6);
+      game.hands[player.name] = hand;
+      io.to(player.id).emit('deal-hand', hand);
     }
 
-    io.to(code).emit('deal-hand', hands);
+    const counts = {};
+    for (const player of game.players) {
+      counts[player.name] = game.hands[player.name].length;
+    }
+
+    io.to(code).emit('player-counts', counts);
   });
 
   socket.on('chat-message', ({ name, message }) => {
     const code = socket.code;
-    io.to(code).emit('chat-message', { name, message });
+    if (code) {
+      io.to(code).emit('chat-message', { name, message });
+    }
   });
 
   socket.on('disconnect', () => {
     const code = socket.code;
     const name = socket.name;
+    const game = games[code];
 
-    if (games[code]) {
-      games[code].players = games[code].players.filter(n => n !== name);
-      io.to(code).emit('player-list', games[code].players);
-      if (games[code].players.length === 0) delete games[code];
+    if (game) {
+      game.players = game.players.filter(p => p.name !== name);
+      delete game.hands?.[name];
+
+      io.to(code).emit('player-list', game.players.map(p => p.name));
+
+      if (game.players.length === 0) delete games[code];
     }
   });
 });
