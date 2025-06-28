@@ -15,6 +15,7 @@ io.on('connection', (socket) => {
     if (!games[code]) {
       games[code] = {
         players: [],
+        readyPlayers: [],
         started: false,
         hands: {},
         topCard: null,
@@ -36,29 +37,38 @@ io.on('connection', (socket) => {
     io.to(code).emit('player-list', games[code].players);
   });
 
-  socket.on('start-game', ({ code }) => {
-    const game = games[code];
-    if (!game || game.started) return;
+  socket.on('gameReadyConfirm', ({ name, room }) => {
+    const game = games[room];
+    if (!game || game.readyPlayers.includes(name)) return;
 
-    game.started = true;
-
-    const hands = {};
-    for (const player of game.players) {
-      hands[player] = drawCards(3);
-    }
-
-    const topCard = drawCards(1)[0];
-
-    game.hands = hands;
-    game.topCard = topCard;
-    game.turnIndex = 0;
-    game.direction = 1;
-
-    io.to(code).emit('deal-hand', {
-      hands,
-      topCard,
-      currentTurn: game.players[game.turnIndex],
+    game.readyPlayers.push(name);
+    io.to(room).emit('updateReadyStatus', {
+      readyPlayers: game.readyPlayers,
+      totalPlayers: game.players.length,
     });
+
+    if (game.readyPlayers.length === game.players.length) {
+      game.started = true;
+
+      const hands = {};
+      for (const player of game.players) {
+        hands[player] = drawCards(3);
+      }
+
+      const topCard = drawCards(1)[0];
+
+      game.hands = hands;
+      game.topCard = topCard;
+      game.turnIndex = 0;
+      game.direction = 1;
+
+      io.to(room).emit('allPlayersConfirmed');
+      io.to(room).emit('deal-hand', {
+        hands,
+        topCard,
+        currentTurn: game.players[game.turnIndex],
+      });
+    }
   });
 
   socket.on('play-card', ({ code, name, card }) => {
@@ -131,6 +141,7 @@ io.on('connection', (socket) => {
 
     if (games[code]) {
       games[code].players = games[code].players.filter((n) => n !== name);
+      games[code].readyPlayers = games[code].readyPlayers.filter((n) => n !== name);
       delete games[code].hands?.[name];
       io.to(code).emit('player-list', games[code].players);
 
