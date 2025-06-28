@@ -11,17 +11,22 @@ app.use(express.static(path.join(__dirname, 'public')));
 let games = {};
 
 io.on('connection', (socket) => {
-  socket.on('join-game', ({ name, code }) => {
+  socket.on('join-game', ({ name, code, isHost }) => {
     if (!games[code]) {
-      games[code] = {
-        players: [],
-        readyPlayers: [],
-        started: false,
-        hands: {},
-        topCard: null,
-        turnIndex: 0,
-        direction: 1,
-      };
+      if (isHost) {
+        games[code] = {
+          players: [],
+          readyPlayers: [],
+          started: false,
+          hands: {},
+          topCard: null,
+          turnIndex: 0,
+          direction: 1,
+        };
+      } else {
+        socket.emit('error-message', 'This game does not exist.');
+        return;
+      }
     }
 
     if (games[code].players.includes(name)) {
