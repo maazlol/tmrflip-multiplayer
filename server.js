@@ -10,41 +10,30 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let games = {};
 
-function drawCards(count) {
-  const pool = ['🔴 1', '🟡 2', '🔵 Skip', '🟢 +2', '🔴 9', '🟡 5', '🟢 Reverse', '🔵 +4'];
-  const cards = [];
-  for (let i = 0; i < count; i++) {
-    cards.push(pool[Math.floor(Math.random() * pool.length)]);
-  }
-  return cards;
-}
-
 io.on('connection', (socket) => {
   socket.on('join-game', ({ name, code }) => {
     if (!games[code]) {
       games[code] = {
         players: [],
-        hands: {},
         started: false,
-        currentTurn: 0,
-        deck: [],
-        discard: []
+        hands: {},
+        topCard: null,
+        turnIndex: 0,
+        direction: 1,
       };
     }
 
-    const game = games[code];
-
-    if (game.players.includes(name)) {
+    if (games[code].players.includes(name)) {
       socket.emit('name-taken');
       return;
     }
 
-    game.players.push(name);
+    games[code].players.push(name);
     socket.join(code);
     socket.code = code;
     socket.name = name;
 
-    io.to(code).emit('player-list', game.players);
+    io.to(code).emit('player-list', games[code].players);
   });
 
   socket.on('start-game', ({ code }) => {
@@ -52,52 +41,82 @@ io.on('connection', (socket) => {
     if (!game || game.started) return;
 
     game.started = true;
-    game.deck = shuffleDeck();
 
+    const hands = {};
     for (const player of game.players) {
-      game.hands[player] = drawCards(3);
+      hands[player] = drawCards(3);
     }
 
-    game.discard.push(game.deck.pop());
+    const topCard = drawCards(1)[0];
+
+    game.hands = hands;
+    game.topCard = topCard;
+    game.turnIndex = 0;
+    game.direction = 1;
 
     io.to(code).emit('deal-hand', {
-      hands: game.hands,
-      topCard: game.discard[game.discard.length - 1],
-      turn: game.players[game.currentTurn]
+      hands,
+      topCard,
+      currentTurn: game.players[game.turnIndex],
     });
   });
 
   socket.on('play-card', ({ code, name, card }) => {
     const game = games[code];
-    if (!game || game.players[game.currentTurn] !== name) return;
+    if (!game || !game.started) return;
+    if (game.players[game.turnIndex] !== name) return;
+    if (!game.hands[name].includes(card)) return;
 
-    const hand = game.hands[name];
-    const index = hand.indexOf(card);
-    if (index > -1) {
-      hand.splice(index, 1);
-      game.discard.push(card);
+    game.hands[name] = game.hands[name].filter((c) => c !== card);
+    game.topCard = card;
 
-      game.currentTurn = (game.currentTurn + 1) % game.players.length;
-
-      io.to(code).emit('update-game', {
-        hands: game.hands,
-        topCard: game.discard[game.discard.length - 1],
-        turn: game.players[game.currentTurn]
-      });
+    let skipNext = false;
+    if (card.includes('Skip')) skipNext = true;
+    if (card.includes('Reverse')) game.direction *= -1;
+    if (card.includes('+2')) {
+      const nextIndex = (game.turnIndex + game.direction + game.players.length) % game.players.length;
+      const nextPlayer = game.players[nextIndex];
+      game.hands[nextPlayer].push(...drawCards(2));
     }
+
+    if (game.hands[name].length === 0) {
+      io.to(code).emit('game-over', { winner: name });
+      delete games[code];
+      return;
+    }
+
+    game.turnIndex =
+      (game.turnIndex + (skipNext ? 2 : 1) * game.direction + game.players.length) %
+      game.players.length;
+
+    const nextTurn = game.players[game.turnIndex];
+
+    io.to(code).emit('update-game', {
+      hands: game.hands,
+      topCard: game.topCard,
+      currentTurn: nextTurn,
+      lastMove: { name, card },
+    });
   });
 
   socket.on('draw-card', ({ code, name }) => {
     const game = games[code];
-    if (!game || game.players[game.currentTurn] !== name) return;
-    if (game.deck.length === 0) return;
+    if (!game || !game.started) return;
+    if (game.players[game.turnIndex] !== name) return;
 
-    game.hands[name].push(game.deck.pop());
+    const newCard = drawCards(1)[0];
+    game.hands[name].push(newCard);
+
+    game.turnIndex =
+      (game.turnIndex + game.direction + game.players.length) % game.players.length;
+
+    const nextTurn = game.players[game.turnIndex];
 
     io.to(code).emit('update-game', {
       hands: game.hands,
-      topCard: game.discard[game.discard.length - 1],
-      turn: game.players[game.currentTurn]
+      topCard: game.topCard,
+      currentTurn: nextTurn,
+      lastMove: { name, card: 'Drew a card' },
     });
   });
 
@@ -111,28 +130,24 @@ io.on('connection', (socket) => {
     const name = socket.name;
 
     if (games[code]) {
-      const game = games[code];
-      game.players = game.players.filter(n => n !== name);
-      delete game.hands[name];
+      games[code].players = games[code].players.filter((n) => n !== name);
+      delete games[code].hands?.[name];
+      io.to(code).emit('player-list', games[code].players);
 
-      io.to(code).emit('player-list', game.players);
-
-      if (game.players.length === 0) {
+      if (games[code].players.length === 0) {
         delete games[code];
       }
     }
   });
 });
 
-function shuffleDeck() {
-  const pool = [
-    '🔴 1', '🔴 2', '🔴 3', '🔴 4', '🔴 5', '🔴 6', '🔴 7', '🔴 8', '🔴 9', '🔴 +2', '🔴 Skip', '🔴 Reverse',
-    '🟡 1', '🟡 2', '🟡 3', '🟡 4', '🟡 5', '🟡 6', '🟡 7', '🟡 8', '🟡 9', '🟡 +2', '🟡 Skip', '🟡 Reverse',
-    '🔵 1', '🔵 2', '🔵 3', '🔵 4', '🔵 5', '🔵 6', '🔵 7', '🔵 8', '🔵 9', '🔵 +2', '🔵 Skip', '🔵 Reverse',
-    '🟢 1', '🟢 2', '🟢 3', '🟢 4', '🟢 5', '🟢 6', '🟢 7', '🟢 8', '🟢 9', '🟢 +2', '🟢 Skip', '🟢 Reverse',
-    '🃏 Wild', '🃏 +4', '🃏 Wild', '🃏 +4'
-  ];
-  return pool.sort(() => Math.random() - 0.5);
+function drawCards(count) {
+  const pool = ['🔴 1', '🟡 2', '🔵 Skip', '🟢 +2', '🔴 9', '🟡 5', '🟢 Reverse', '🔵 +4'];
+  const cards = [];
+  for (let i = 0; i < count; i++) {
+    cards.push(pool[Math.floor(Math.random() * pool.length)]);
+  }
+  return cards;
 }
 
 http.listen(PORT, () => {
