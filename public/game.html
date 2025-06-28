@@ -35,16 +35,6 @@
       margin: 2px;
     }
 
-    #readySection {
-      text-align: center;
-      padding: 5px;
-    }
-
-    #readyPlayers {
-      font-size: 13px;
-      margin-top: 4px;
-    }
-
     #center {
       flex: 1;
       display: flex;
@@ -108,12 +98,6 @@
 </head>
 <body>
 
-  <div id="readySection">
-    <button id="readyBtn">Ready</button>
-    <div id="readyCount">0/0 Ready</div>
-    <div id="readyPlayers"></div>
-  </div>
-
   <div id="opponents"></div>
 
   <div id="center">
@@ -128,9 +112,9 @@
   <script>
     const socket = io();
 
-    const playerName = localStorage.getItem("tmrflip-name");
     const urlParams = new URLSearchParams(window.location.search);
-    const roomCode = urlParams.get("room");
+    const roomCode = urlParams.get("code");
+    const playerName = urlParams.get("name");
 
     if (!playerName || !roomCode) {
       alert("Missing name or room.");
@@ -142,10 +126,6 @@
     const statusDiv = document.getElementById("status");
     const drawDeck = document.getElementById("drawDeck");
     const opponentsDiv = document.getElementById("opponents");
-    const readyBtn = document.getElementById("readyBtn");
-    const readyCountDiv = document.getElementById("readyCount");
-    const readyPlayersDiv = document.getElementById("readyPlayers");
-    const readySection = document.getElementById("readySection");
 
     socket.emit("joinGameRoom", { name: playerName, room: roomCode });
 
@@ -153,10 +133,8 @@
       const player = state.players.find(p => p.name === playerName);
       if (!player) return;
 
-      // Show top card
       topCardDiv.textContent = `${state.topCard.color} ${state.topCard.value}`;
 
-      // Show player hand
       handDiv.innerHTML = '';
       player.hand.forEach((card, index) => {
         const el = document.createElement("div");
@@ -171,7 +149,6 @@
         handDiv.appendChild(el);
       });
 
-      // Show opponents
       opponentsDiv.innerHTML = '';
       state.players.forEach(p => {
         if (p.name === playerName) return;
@@ -184,7 +161,6 @@
         opponentsDiv.appendChild(opp);
       });
 
-      // Turn indicator
       if (state.currentTurn === playerName) {
         statusDiv.textContent = "Your Turn";
       } else {
@@ -195,24 +171,6 @@
     drawDeck.onclick = () => {
       socket.emit("drawCard", { room: roomCode });
     };
-
-    // Ready button click
-    readyBtn.onclick = () => {
-      socket.emit("gameReadyConfirm", { name: playerName, room: roomCode });
-      readyBtn.disabled = true;
-      readyBtn.innerText = "Ready ✔";
-    };
-
-    // Update ready status UI
-    socket.on("updateReadyStatus", ({ readyPlayers, totalPlayers }) => {
-      readyCountDiv.innerText = `${readyPlayers.length}/${totalPlayers} Ready`;
-      readyPlayersDiv.innerHTML = readyPlayers.map(name => `<div>${name}</div>`).join('');
-    });
-
-    // Hide ready UI when all are ready
-    socket.on("allPlayersConfirmed", () => {
-      readySection.style.display = "none";
-    });
 
     socket.on("invalidMove", (msg) => {
       alert(msg);
