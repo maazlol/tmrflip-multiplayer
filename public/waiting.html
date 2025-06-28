@@ -13,17 +13,14 @@
       font-family: sans-serif;
       text-align: center;
     }
-
     h1 {
       font-size: 3rem;
       margin-bottom: 10px;
     }
-
     #nameEntry {
       display: none;
       margin-top: 30px;
     }
-
     #nameEntry input {
       padding: 10px;
       font-size: 1rem;
@@ -33,7 +30,6 @@
       color: white;
       width: 250px;
     }
-
     #nameEntry button {
       padding: 10px 20px;
       font-size: 1rem;
@@ -44,11 +40,9 @@
       cursor: pointer;
       border-radius: 10px;
     }
-
     .copy-section {
       margin-bottom: 25px;
     }
-
     .code {
       display: inline-block;
       padding: 10px 20px;
@@ -58,11 +52,9 @@
       border-radius: 10px;
       cursor: pointer;
     }
-
     .code:hover {
       background-color: rgba(255, 255, 255, 0.1);
     }
-
     #playerBox {
       width: 100%;
       max-width: 500px;
@@ -74,11 +66,9 @@
       overflow-y: auto;
       max-height: 300px;
     }
-
     #players {
       font-size: 1rem;
     }
-
     #startBtn {
       display: none;
       margin-top: 15px;
@@ -90,7 +80,6 @@
       color: white;
       cursor: pointer;
     }
-
     .chat {
       max-width: 500px;
       margin: 20px auto;
@@ -101,14 +90,12 @@
       overflow-y: auto;
       font-size: 0.95rem;
     }
-
     .chat-input {
       display: flex;
       justify-content: center;
       gap: 10px;
       margin-top: 10px;
     }
-
     .chat-input input {
       padding: 8px;
       font-size: 1rem;
@@ -118,7 +105,6 @@
       color: white;
       width: 70%;
     }
-
     .chat-input button {
       padding: 8px 14px;
       font-size: 1rem;
@@ -128,35 +114,31 @@
       border-radius: 6px;
       cursor: pointer;
     }
-
     .chat-input button:hover {
       background-color: rgba(255,255,255,0.1);
     }
-
     .discord-icon {
       position: fixed;
       bottom: 20px;
       right: 20px;
       width: 40px;
     }
-
     .discord-icon img {
       width: 100%;
       filter: grayscale(100%) brightness(150%);
     }
-
-    #mainContent { display: none; }
+    #mainContent {
+      display: none;
+    }
   </style>
 </head>
 <body>
   <h1>tmrflip</h1>
-
   <div id="nameEntry">
     <input type="text" id="nameInput" placeholder="Enter your name">
     <br>
     <button onclick="submitName()">Join</button>
   </div>
-
   <div id="mainContent">
     <p id="welcomeText"></p>
     <div class="copy-section">
@@ -173,11 +155,9 @@
       <button onclick="sendMessage()">Send</button>
     </div>
   </div>
-
   <a class="discord-icon" href="https://discord.gg/znceQfMRUT" target="_blank">
     <img src="https://cdn-icons-png.flaticon.com/512/5968/5968756.png" alt="Discord" />
   </a>
-
   <script src="/socket.io/socket.io.js"></script>
   <script>
     let code = null;
@@ -214,7 +194,6 @@
 
     function initSocket() {
       document.getElementById('mainContent').style.display = 'block';
-
       socket = io();
       document.getElementById('welcomeText').innerText = `${name}, your game is almost ready!`;
 
@@ -232,7 +211,6 @@
         list.innerHTML = `<strong>Host:</strong> ${host || 'Unknown'}<br><br>` +
           '<strong>Players Joined:</strong><br>' +
           others.map(p => '• ' + p).join('<br>');
-
         const isHost = (name === host);
         const startBtn = document.getElementById('startBtn');
         if (isHost && players.length >= 2 && players.length <= 10) {
@@ -248,6 +226,11 @@
         msg.innerHTML = `<strong>${name}:</strong> ${message}`;
         box.appendChild(msg);
         box.scrollTop = box.scrollHeight;
+      });
+
+      socket.on('deal-hand', () => {
+        const gameUrl = `${window.location.origin}/game.html?code=${code}&name=${encodeURIComponent(name)}`;
+        window.location.href = gameUrl;
       });
 
       const chatInput = document.getElementById('chatInput');
