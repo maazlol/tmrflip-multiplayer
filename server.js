@@ -1,56 +1,57 @@
 const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
+const path = require('path');
 
-app.use(express.static('public'));
+const PORT = process.env.PORT || 3000;
 
-const gameRooms = {};
+app.use(express.static(path.join(__dirname, 'public')));
+
+let games = {};
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-
   socket.on('join-game', ({ name, code }) => {
+    if (!games[code]) {
+      games[code] = [];
+    }
+
+    if (games[code].includes(name)) {
+      socket.emit('name-taken');
+      return;
+    }
+
+    games[code].push(name);
     socket.join(code);
+    socket.code = code;
+    socket.name = name;
 
-    if (!gameRooms[code]) {
-      gameRooms[code] = [];
-    }
+    io.to(code).emit('player-list', games[code]);
 
-    gameRooms[code].push({ id: socket.id, name });
-    const names = gameRooms[code].map(p => p.name);
-    io.to(code).emit('player-list', names);
-  });
+    socket.on('chat-message', ({ name, message }) => {
+      io.to(code).emit('chat-message', { name, message });
+    });
 
-  socket.on('chat-message', ({ code, name, message }) => {
-    io.to(code).emit('chat-message', { name, message });
-  });
+    socket.on('start-game', ({ code }) => {
+      io.to(code).emit('start-game');
+    });
 
-  socket.on('disconnect', () => {
-    for (const code in gameRooms) {
-      const room = gameRooms[code];
-      const index = room.findIndex(p => p.id === socket.id);
+    socket.on('disconnect', () => {
+      const code = socket.code;
+      const name = socket.name;
 
-      if (index !== -1) {
-        room.splice(index, 1);
-        if (room.length === 0) {
-          delete gameRooms[code];
-        } else {
-          const names = room.map(p => p.name);
-          io.to(code).emit('player-list', names);
+      if (games[code]) {
+        games[code] = games[code].filter(n => n !== name);
+        io.to(code).emit('player-list', games[code]);
+
+        if (games[code].length === 0) {
+          delete games[code];
         }
-        break;
       }
-    }
-
-    console.log('User disconnected:', socket.id);
+    });
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+http.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
