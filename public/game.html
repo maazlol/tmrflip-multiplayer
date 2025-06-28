@@ -159,8 +159,10 @@
       const player = state.players.find(p => p.name === playerName);
       if (!player) return;
 
+      // Top card
       topCardDiv.textContent = `${state.topCard.color} ${state.topCard.value}`;
 
+      // Player hand
       handDiv.innerHTML = '';
       player.hand.forEach((card, index) => {
         const el = document.createElement("div");
@@ -175,6 +177,7 @@
         handDiv.appendChild(el);
       });
 
+      // Opponents
       const others = state.players.filter(p => p.name !== playerName);
       leftPlayers.innerHTML = '';
       rightPlayers.innerHTML = '';
@@ -187,6 +190,7 @@
         else rightPlayers.appendChild(box);
       });
 
+      // Status
       if (state.currentTurn === playerName) {
         statusDiv.textContent = "Your Turn";
       } else {
