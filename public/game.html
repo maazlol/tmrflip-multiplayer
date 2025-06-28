@@ -15,65 +15,79 @@
       height: 100vh;
     }
 
-    #gameArea {
-      display: grid;
-      grid-template-areas:
-        "left center right"
-        "left bottom right";
-      grid-template-columns: 1fr 2fr 1fr;
-      grid-template-rows: 1fr auto;
-      height: 100%;
+    #layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
     }
 
-    #leftOpponents, #rightOpponents, #bottomPlayer {
+    #leftPlayers, #rightPlayers {
+      width: 150px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    #centerGame {
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 15px;
+      justify-content: center;
+      position: relative;
     }
 
-    #leftOpponents { grid-area: left; justify-content: center; }
-    #rightOpponents { grid-area: right; justify-content: center; }
-    #centerTable { grid-area: center; display: flex; justify-content: center; align-items: center; gap: 50px; }
-    #bottomPlayer { grid-area: bottom; padding: 10px; border-top: 2px solid #222; background: #111; }
-
-    .opponent-box, .player-box {
+    .player-box {
+      width: 120px;
+      height: 150px;
       border: 2px dashed white;
       border-radius: 10px;
-      padding: 10px;
-      width: 120px;
-      text-align: center;
-    }
-
-    .card-back {
-      width: 40px;
-      height: 60px;
-      background: gray;
-      border-radius: 6px;
-      display: inline-block;
-      margin: 2px;
-    }
-
-    .more-count {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #aaa;
-    }
-
-    .deck, .top-card {
-      width: 80px;
-      height: 120px;
-      border-radius: 10px;
-      box-shadow: 0 0 5px rgba(255,255,255,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      color: #000;
+      flex-direction: column;
+      font-size: 12px;
+      text-align: center;
     }
 
-    .deck { background: #ccc; cursor: pointer; }
-    .top-card { background: #fff; border: 2px solid #333; }
+    .card-count {
+      margin-top: 10px;
+      background: white;
+      color: black;
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-weight: bold;
+    }
+
+    #topCard, #drawDeck {
+      width: 100px;
+      height: 140px;
+      border-radius: 12px;
+      background: white;
+      color: black;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 10px;
+      border: 2px solid #333;
+    }
+
+    #drawDeck {
+      background: #ccc;
+      cursor: pointer;
+    }
+
+    #hand {
+      display: flex;
+      justify-content: center;
+      padding: 10px;
+      background: #111;
+      overflow-x: auto;
+      border-top: 2px solid #222;
+    }
 
     .card {
       min-width: 60px;
@@ -90,113 +104,110 @@
       color: #000;
     }
 
-    #chatBox {
-      max-height: 200px;
-      overflow-y: auto;
-      margin-top: auto;
-      border-top: 1px solid #444;
-      padding: 10px;
-      font-size: 14px;
+    #status {
+      text-align: center;
+      padding: 5px;
+      color: #ccc;
     }
   </style>
 </head>
 <body>
+  <div id="status">Connecting...</div>
 
-<div id="gameArea">
-  <div id="leftOpponents"></div>
-  <div id="centerTable">
-    <div class="deck" id="drawDeck">Deck</div>
-    <div class="top-card" id="topCard">Top</div>
+  <div id="layout">
+    <div id="leftPlayers"></div>
+
+    <div id="centerGame">
+      <div id="drawDeck">Deck</div>
+      <div id="topCard">Top</div>
+      <div id="hand"></div>
+    </div>
+
+    <div id="rightPlayers"></div>
   </div>
-  <div id="rightOpponents"></div>
-  <div id="bottomPlayer" class="player-box"></div>
-</div>
 
-<div id="chatBox"></div>
+  <script>
+    const socket = io();
 
-<script>
-const socket = io();
+    const urlParams = new URLSearchParams(window.location.search);
+    let roomCode = urlParams.get("code");
+    let playerName = urlParams.get("name");
 
-const urlParams = new URLSearchParams(window.location.search);
-let roomCode = urlParams.get("code");
-let playerName = urlParams.get("name");
-
-if (!playerName || !roomCode) {
-  playerName = localStorage.getItem("tmrflip-name");
-  roomCode = localStorage.getItem("tmrflip-room");
-}
-
-if (!playerName || !roomCode) {
-  alert("Missing name or room.");
-  window.location.href = "index.html";
-} else {
-  localStorage.setItem("tmrflip-name", playerName);
-  localStorage.setItem("tmrflip-room", roomCode);
-}
-
-const drawDeck = document.getElementById("drawDeck");
-const topCardDiv = document.getElementById("topCard");
-const leftOpponents = document.getElementById("leftOpponents");
-const rightOpponents = document.getElementById("rightOpponents");
-const bottomPlayer = document.getElementById("bottomPlayer");
-const chatBox = document.getElementById("chatBox");
-
-socket.emit("joinGameRoom", { name: playerName, room: roomCode });
-
-drawDeck.onclick = () => {
-  socket.emit("drawCard", { room: roomCode });
-};
-
-socket.on("gameState", (state) => {
-  const player = state.players.find(p => p.name === playerName);
-  if (!player) return;
-
-  topCardDiv.textContent = `${state.topCard.color} ${state.topCard.value}`;
-
-  leftOpponents.innerHTML = '';
-  rightOpponents.innerHTML = '';
-  bottomPlayer.innerHTML = `<div>${playerName}</div>`;
-
-  player.hand.forEach((card, index) => {
-    const el = document.createElement("div");
-    el.className = "card";
-    el.textContent = `${card.color} ${card.value}`;
-    el.onclick = () => {
-      if (state.currentTurn === playerName) {
-        socket.emit("playCard", { room: roomCode, card, index });
-      }
-    };
-    if (state.currentTurn !== playerName) el.style.opacity = 0.4;
-    bottomPlayer.appendChild(el);
-  });
-
-  const others = state.players.filter(p => p.name !== playerName);
-  others.forEach((p, i) => {
-    const el = document.createElement("div");
-    el.className = "opponent-box";
-    el.innerHTML = `<div>${p.name}</div>`;
-    const visible = p.hand.slice(0, 3);
-    visible.forEach(() => {
-      el.innerHTML += `<div class="card-back"></div>`;
-    });
-    if (p.hand.length > 3) {
-      el.innerHTML += `<div class="more-count">+${p.hand.length - 3}</div>`;
+    if (!playerName || !roomCode) {
+      playerName = localStorage.getItem("tmrflip-name");
+      roomCode = localStorage.getItem("tmrflip-room");
     }
-    if (i < 3) leftOpponents.appendChild(el);
-    else rightOpponents.appendChild(el);
-  });
-});
 
-socket.on("invalidMove", (msg) => {
-  alert(msg);
-});
+    if (!playerName || !roomCode) {
+      alert("Missing name or room.");
+      window.location.href = "index.html";
+    } else {
+      localStorage.setItem("tmrflip-name", playerName);
+      localStorage.setItem("tmrflip-room", roomCode);
+    }
 
-socket.on("gameOver", (winner) => {
-  alert(`Game Over! Winner: ${winner}`);
-  localStorage.removeItem("tmrflip-name");
-  localStorage.removeItem("tmrflip-room");
-  window.location.href = "index.html";
-});
-</script>
+    const handDiv = document.getElementById("hand");
+    const topCardDiv = document.getElementById("topCard");
+    const drawDeck = document.getElementById("drawDeck");
+    const statusDiv = document.getElementById("status");
+    const leftPlayers = document.getElementById("leftPlayers");
+    const rightPlayers = document.getElementById("rightPlayers");
+
+    socket.emit("joinGameRoom", { name: playerName, room: roomCode });
+
+    socket.on("gameState", (state) => {
+      const player = state.players.find(p => p.name === playerName);
+      if (!player) return;
+
+      topCardDiv.textContent = `${state.topCard.color} ${state.topCard.value}`;
+
+      handDiv.innerHTML = '';
+      player.hand.forEach((card, index) => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.textContent = `${card.color} ${card.value}`;
+        el.onclick = () => {
+          if (state.currentTurn === playerName) {
+            socket.emit("playCard", { room: roomCode, card, index });
+          }
+        };
+        if (state.currentTurn !== playerName) el.style.opacity = 0.4;
+        handDiv.appendChild(el);
+      });
+
+      const others = state.players.filter(p => p.name !== playerName);
+      leftPlayers.innerHTML = '';
+      rightPlayers.innerHTML = '';
+
+      others.forEach((p, i) => {
+        const box = document.createElement("div");
+        box.className = "player-box";
+        box.innerHTML = `<div>${p.name}</div><div class="card-count">+${p.hand.length}</div>`;
+        if (i % 2 === 0) leftPlayers.appendChild(box);
+        else rightPlayers.appendChild(box);
+      });
+
+      if (state.currentTurn === playerName) {
+        statusDiv.textContent = "Your Turn";
+      } else {
+        statusDiv.textContent = `Waiting for ${state.currentTurn}...`;
+      }
+    });
+
+    drawDeck.onclick = () => {
+      socket.emit("drawCard", { room: roomCode });
+    };
+
+    socket.on("invalidMove", (msg) => {
+      alert(msg);
+    });
+
+    socket.on("gameOver", (winner) => {
+      alert(`Game Over! Winner: ${winner}`);
+      localStorage.removeItem("tmrflip-name");
+      localStorage.removeItem("tmrflip-room");
+      window.location.href = "index.html";
+    });
+  </script>
 </body>
 </html>
