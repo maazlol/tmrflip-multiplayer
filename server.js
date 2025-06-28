@@ -16,7 +16,6 @@ io.on('connection', (socket) => {
       if (isHost) {
         games[code] = {
           players: [],
-          readyPlayers: [],
           started: false,
           hands: {},
           topCard: null,
@@ -72,35 +71,37 @@ io.on('connection', (socket) => {
     startGame(code);
   });
 
-  socket.on('play-card', ({ code, name, card }) => {
-    const game = games[code];
+  socket.on('playCard', ({ room, card, index }) => {
+    const game = games[room];
+    const name = socket.name;
     if (!game || !game.started) return;
     if (game.players[game.turnIndex] !== name) return;
-    if (!game.hands[name].includes(card)) return;
 
-    game.hands[name] = game.hands[name].filter((c) => c !== card);
+    const playerHand = game.hands[name];
+    const handCard = playerHand[index];
+    if (!handCard || handCard.color !== card.color || handCard.value !== card.value) return;
+
+    playerHand.splice(index, 1);
     game.topCard = card;
 
     let skipNext = false;
-    if (card.includes('Skip')) skipNext = true;
-    if (card.includes('Reverse')) game.direction *= -1;
-    if (card.includes('+2')) {
+    if (card.value === 'Skip') skipNext = true;
+    if (card.value === 'Reverse') game.direction *= -1;
+    if (card.value === '+2') {
       const nextIndex = (game.turnIndex + game.direction + game.players.length) % game.players.length;
       const nextPlayer = game.players[nextIndex];
       game.hands[nextPlayer].push(...drawCards(2));
     }
 
-    if (game.hands[name].length === 0) {
-      io.to(code).emit('game-over', { winner: name });
-      delete games[code];
+    if (playerHand.length === 0) {
+      io.to(room).emit('gameOver', name);
+      delete games[room];
       return;
     }
 
-    game.turnIndex =
-      (game.turnIndex + (skipNext ? 2 : 1) * game.direction + game.players.length) %
-      game.players.length;
+    game.turnIndex = (game.turnIndex + (skipNext ? 2 : 1) * game.direction + game.players.length) % game.players.length;
 
-    io.to(code).emit('gameState', {
+    io.to(room).emit('gameState', {
       players: game.players.map(n => ({
         name: n,
         hand: game.hands[n]
@@ -110,18 +111,18 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('draw-card', ({ code, name }) => {
-    const game = games[code];
+  socket.on('drawCard', ({ room }) => {
+    const game = games[room];
+    const name = socket.name;
     if (!game || !game.started) return;
     if (game.players[game.turnIndex] !== name) return;
 
     const newCard = drawCards(1)[0];
     game.hands[name].push(newCard);
 
-    game.turnIndex =
-      (game.turnIndex + game.direction + game.players.length) % game.players.length;
+    game.turnIndex = (game.turnIndex + game.direction + game.players.length) % game.players.length;
 
-    io.to(code).emit('gameState', {
+    io.to(room).emit('gameState', {
       players: game.players.map(n => ({
         name: n,
         hand: game.hands[n]
@@ -142,7 +143,6 @@ io.on('connection', (socket) => {
 
     if (games[code]) {
       games[code].players = games[code].players.filter((n) => n !== name);
-      games[code].readyPlayers = games[code].readyPlayers.filter((n) => n !== name);
       delete games[code].hands?.[name];
       io.to(code).emit('player-list', games[code].players);
 
@@ -154,10 +154,13 @@ io.on('connection', (socket) => {
 });
 
 function drawCards(count) {
-  const pool = ['🔴 1', '🟡 2', '🔵 Skip', '🟢 +2', '🔴 9', '🟡 5', '🟢 Reverse', '🔵 +4'];
+  const colors = ['🔴', '🟡', '🟢', '🔵'];
+  const values = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'Skip', 'Reverse', '+2'];
   const cards = [];
   for (let i = 0; i < count; i++) {
-    cards.push(pool[Math.floor(Math.random() * pool.length)]);
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const value = values[Math.floor(Math.random() * values.length)];
+    cards.push({ color, value });
   }
   return cards;
 }
@@ -169,7 +172,7 @@ function startGame(code) {
   game.started = true;
   const hands = {};
   for (const player of game.players) {
-    hands[player] = drawCards(3);
+    hands[player] = drawCards(5);
   }
 
   const topCard = drawCards(1)[0];
