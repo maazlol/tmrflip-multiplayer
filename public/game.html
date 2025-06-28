@@ -1,246 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TmrFlip Game</title>
+  <meta charset="UTF-8">
+  <title>tmrflip - Game</title>
+  <script src="/socket.io/socket.io.js"></script>
   <style>
     body {
       margin: 0;
+      font-family: sans-serif;
       background: #000;
       color: #fff;
-      font-family: sans-serif;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-      min-height: 100vh;
-      padding: 20px;
+      height: 100vh;
     }
 
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
-    }
-
-    #gameArea {
+    #opponents {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-      max-width: 1200px;
-      flex: 1;
-    }
-
-    .side {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      align-items: center;
-      width: 120px;
-    }
-
-    .player {
-      position: relative;
-      border: 2px dashed white;
+      justify-content: space-around;
       padding: 10px;
-      border-radius: 10px;
-      width: 100px;
+    }
+
+    .opponent {
       text-align: center;
-      background-color: #111;
-      transition: transform 0.3s ease;
+      font-size: 14px;
     }
 
-    .player-name {
-      position: absolute;
-      top: 5px;
-      right: 5px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      color: #ff0;
+    .opponent .card-back {
+      width: 40px;
+      height: 60px;
+      background: gray;
+      border-radius: 6px;
+      display: inline-block;
+      margin: 2px;
     }
 
-    .card-backs {
+    #readySection {
+      text-align: center;
+      padding: 5px;
+    }
+
+    #readyPlayers {
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    #center {
+      flex: 1;
       display: flex;
       justify-content: center;
-      gap: 5px;
-      flex-wrap: wrap;
-      margin-top: 25px;
-    }
-
-    .card-back {
-      width: 30px;
-      height: 45px;
-      background: white;
-      border-radius: 5px;
-      animation: flipIn 0.5s ease;
-    }
-
-    .extra-cards {
-      margin-top: 5px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      text-decoration: underline;
-    }
-
-    #centerBoard {
-      display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 15px;
+      gap: 60px;
     }
 
-    .top-card, .draw-pile {
+    .deck, .top-card {
       width: 80px;
       height: 120px;
       border-radius: 10px;
-      background-color: #fff;
-      color: #000;
+      box-shadow: 0 0 5px rgba(255,255,255,0.2);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 1.2rem;
-      cursor: pointer;
-      transition: transform 0.3s ease;
-    }
-
-    .draw-pile:hover {
-      transform: scale(1.05);
-    }
-
-    #turnInfo {
-      margin-top: 10px;
       font-weight: bold;
-      color: #0f0;
+      color: #000;
     }
 
-    #myCards {
+    .deck {
+      background: #ccc;
+      cursor: pointer;
+    }
+
+    .top-card {
+      background: #fff;
+      border: 2px solid #333;
+    }
+
+    #hand {
       display: flex;
       justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 30px;
-    }
-
-    .my-card {
       padding: 10px;
-      border-radius: 8px;
-      font-size: 1rem;
-      background-color: #fff;
-      color: #000;
+      overflow-x: auto;
+      background: #111;
+      border-top: 2px solid #222;
+    }
+
+    .card {
       min-width: 60px;
-      text-align: center;
+      height: 90px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid #333;
+      margin: 0 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
       cursor: pointer;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      color: #000;
     }
 
-    .my-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 4px 10px rgba(255,255,255,0.3);
-    }
-
-    @keyframes flipIn {
-      from {
-        transform: rotateY(90deg);
-        opacity: 0;
-      }
-      to {
-        transform: rotateY(0);
-        opacity: 1;
-      }
+    #status {
+      text-align: center;
+      padding: 5px;
+      color: #ccc;
     }
   </style>
 </head>
 <body>
-  <h1>TmrFlip Game</h1>
 
-  <div id="gameArea">
-    <div class="side" id="leftPlayers"></div>
-
-    <div id="centerBoard">
-      <div id="topCard" class="top-card">❔</div>
-      <div id="drawPile" class="draw-pile">Draw</div>
-      <div id="turnInfo"></div>
-    </div>
-
-    <div class="side" id="rightPlayers"></div>
+  <div id="readySection">
+    <button id="readyBtn">Ready</button>
+    <div id="readyCount">0/0 Ready</div>
+    <div id="readyPlayers"></div>
   </div>
 
-  <div id="myCards"></div>
+  <div id="opponents"></div>
 
-  <script src="/socket.io/socket.io.js"></script>
+  <div id="center">
+    <div class="deck" id="drawDeck">Deck</div>
+    <div class="top-card" id="topCard">Top</div>
+  </div>
+
+  <div id="status">Connecting...</div>
+
+  <div id="hand"></div>
+
   <script>
     const socket = io();
-    const params = new URLSearchParams(window.location.search);
-    const name = params.get('name');
-    const code = params.get('code');
 
-    socket.emit('join-game', { name, code });
+    const playerName = localStorage.getItem("tmrflip-name");
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = urlParams.get("room");
 
-    socket.on('name-taken', () => {
-      alert('Name already taken.');
-      window.location.href = 'index.html';
-    });
-
-    socket.on('deal-hand', ({ hands, topCard, currentTurn }) => {
-      renderPlayers(hands);
-      renderMyCards(hands[name]);
-      updateTopCard(topCard);
-      document.getElementById('turnInfo').innerText = `Current turn: ${currentTurn}`;
-    });
-
-    socket.on('update-game', ({ hands, topCard, currentTurn, lastMove }) => {
-      renderPlayers(hands);
-      renderMyCards(hands[name]);
-      updateTopCard(topCard);
-      document.getElementById('turnInfo').innerText = `Current turn: ${currentTurn}`;
-    });
-
-    document.getElementById('drawPile').addEventListener('click', () => {
-      socket.emit('draw-card', { name, code });
-    });
-
-    function updateTopCard(card) {
-      const topCard = document.getElementById('topCard');
-      topCard.innerText = card;
+    if (!playerName || !roomCode) {
+      alert("Missing name or room.");
+      window.location.href = "index.html";
     }
 
-    function renderPlayers(hands) {
-      const others = Object.keys(hands).filter(p => p !== name).map(p => ({ name: p, cards: hands[p].length }));
-      const left = document.getElementById('leftPlayers');
-      const right = document.getElementById('rightPlayers');
-      left.innerHTML = '';
-      right.innerHTML = '';
-      const mid = Math.ceil(others.length / 2);
-      others.forEach((player, i) => {
-        const box = document.createElement('div');
-        box.className = 'player';
-        box.innerHTML = `<div class="player-name">${player.name}</div><div class="card-backs">${'■'.repeat(Math.min(player.cards, 3))}</div>`;
-        if (player.cards > 3) {
-          const extra = document.createElement('div');
-          extra.className = 'extra-cards';
-          extra.innerText = `+${player.cards - 3} more`;
-          box.appendChild(extra);
+    const handDiv = document.getElementById("hand");
+    const topCardDiv = document.getElementById("topCard");
+    const statusDiv = document.getElementById("status");
+    const drawDeck = document.getElementById("drawDeck");
+    const opponentsDiv = document.getElementById("opponents");
+    const readyBtn = document.getElementById("readyBtn");
+    const readyCountDiv = document.getElementById("readyCount");
+    const readyPlayersDiv = document.getElementById("readyPlayers");
+    const readySection = document.getElementById("readySection");
+
+    socket.emit("joinGameRoom", { name: playerName, room: roomCode });
+
+    socket.on("gameState", (state) => {
+      const player = state.players.find(p => p.name === playerName);
+      if (!player) return;
+
+      // Show top card
+      topCardDiv.textContent = `${state.topCard.color} ${state.topCard.value}`;
+
+      // Show player hand
+      handDiv.innerHTML = '';
+      player.hand.forEach((card, index) => {
+        const el = document.createElement("div");
+        el.className = "card";
+        el.textContent = `${card.color} ${card.value}`;
+        el.onclick = () => {
+          if (state.currentTurn === playerName) {
+            socket.emit("playCard", { room: roomCode, card, index });
+          }
+        };
+        if (state.currentTurn !== playerName) el.style.opacity = 0.4;
+        handDiv.appendChild(el);
+      });
+
+      // Show opponents
+      opponentsDiv.innerHTML = '';
+      state.players.forEach(p => {
+        if (p.name === playerName) return;
+        const opp = document.createElement("div");
+        opp.className = "opponent";
+        opp.innerHTML = `<div>${p.name}</div>`;
+        for (let i = 0; i < p.hand.length; i++) {
+          opp.innerHTML += `<div class="card-back"></div>`;
         }
-        (i < mid ? left : right).appendChild(box);
+        opponentsDiv.appendChild(opp);
       });
-    }
 
-    function renderMyCards(cards) {
-      const container = document.getElementById('myCards');
-      container.innerHTML = '';
-      cards.forEach(card => {
-        const el = document.createElement('div');
-        el.className = 'my-card';
-        el.innerText = card;
-        el.onclick = () => socket.emit('play-card', { code, name, card });
-        container.appendChild(el);
-      });
-    }
+      // Turn indicator
+      if (state.currentTurn === playerName) {
+        statusDiv.textContent = "Your Turn";
+      } else {
+        statusDiv.textContent = `Waiting for ${state.currentTurn}...`;
+      }
+    });
 
-    socket.on('game-over', ({ winner }) => {
-      alert(`${winner} won the game!`);
-      window.location.href = 'index.html';
+    drawDeck.onclick = () => {
+      socket.emit("drawCard", { room: roomCode });
+    };
+
+    // Ready button click
+    readyBtn.onclick = () => {
+      socket.emit("gameReadyConfirm", { name: playerName, room: roomCode });
+      readyBtn.disabled = true;
+      readyBtn.innerText = "Ready ✔";
+    };
+
+    // Update ready status UI
+    socket.on("updateReadyStatus", ({ readyPlayers, totalPlayers }) => {
+      readyCountDiv.innerText = `${readyPlayers.length}/${totalPlayers} Ready`;
+      readyPlayersDiv.innerHTML = readyPlayers.map(name => `<div>${name}</div>`).join('');
+    });
+
+    // Hide ready UI when all are ready
+    socket.on("allPlayersConfirmed", () => {
+      readySection.style.display = "none";
+    });
+
+    socket.on("invalidMove", (msg) => {
+      alert(msg);
+    });
+
+    socket.on("gameOver", (winner) => {
+      alert(`Game Over! Winner: ${winner}`);
+      window.location.href = "index.html";
     });
   </script>
 </body>
