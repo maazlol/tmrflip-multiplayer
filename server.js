@@ -10,8 +10,10 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-const rooms = {};
+// Game Rooms Map
+const rooms = {}; // key = code
 
+// Route for game.html name setup
 app.get('/getName', (req, res) => {
   const name = 'Player' + Math.floor(Math.random() * 10000);
   res.json({ name });
@@ -33,6 +35,7 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let playerName = null;
 
+  // 🔹 Lobby: Join or create
   socket.on('join-game', ({ name, code, isHost }) => {
     if (!rooms[code]) {
       if (!isHost) return;
@@ -46,8 +49,6 @@ io.on('connection', (socket) => {
     }
 
     const room = rooms[code];
-    socket.join(code); // ✅ IMPORTANT LINE ADDED
-
     if (room.players.find(p => p.name === name)) {
       socket.emit('name-taken');
       return;
@@ -55,6 +56,7 @@ io.on('connection', (socket) => {
 
     playerName = name;
     currentRoom = code;
+    socket.join(code); // ✅ ADDED REQUIRED LINE
     room.players.push({ name, id: socket.id, hand: [], ready: false });
 
     const allNames = room.players.map(p => p.name);
@@ -83,6 +85,7 @@ io.on('connection', (socket) => {
     });
   });
 
+  // 🔹 Actual Game Logic from game.html
   socket.on('joinGame', (name) => {
     const code = socket.handshake.headers.referer.split('?code=')[1]?.split('&')[0];
     const room = rooms[code];
