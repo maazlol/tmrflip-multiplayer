@@ -5,7 +5,13 @@ class Card {
   }
 
   isPlayableOn(topCard) {
-    return this.color === topCard.color || this.value === topCard.value || this.color === 'Wild';
+    return (
+      this.color === topCard.color ||
+      this.value === topCard.value ||
+      this.color === "Wild"
+    );
   }
 }
+
 module.exports = Card;
+
