@@ -1,4 +1,3 @@
-// tmrflip - Full Server.js with support for game.html and waiting/index.html
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -11,8 +10,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 🔹 Minimal name route for game.html
-tlet globalPlayers = []; // flat array of { name, id, hand, ready }
+let globalPlayers = [];
 let gameStarted = false;
 let gameTopCard = null;
 let gameTurnIndex = 0;
@@ -42,7 +40,6 @@ function sendUpdate(currentTurn = null) {
 }
 
 io.on('connection', socket => {
-  // 🔸 Support for game.html
   socket.on('joinGame', (name) => {
     if (globalPlayers.find(p => p.name === name)) {
       socket.emit('joinFailed', 'Name already taken.');
@@ -109,6 +106,10 @@ io.on('connection', socket => {
     globalPlayers = globalPlayers.filter(p => p.id !== socket.id);
     sendUpdate();
   });
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 server.listen(PORT, () => {
