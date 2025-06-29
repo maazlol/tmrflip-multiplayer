@@ -1,4 +1,4 @@
-// tmrflip - Full Server.js supporting waiting.html + game.html
+// tmrflip - Full Server.js supporting waiting.html + game.html with full UNO logic
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -10,10 +10,8 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Game Rooms Map
-const rooms = {}; // key = code
+const rooms = {};
 
-// Route for game.html name setup
 app.get('/getName', (req, res) => {
   const name = 'Player' + Math.floor(Math.random() * 10000);
   res.json({ name });
@@ -23,10 +21,16 @@ function drawCards(n = 1) {
   const colors = ['Red', 'Green', 'Blue', 'Yellow'];
   const values = ['0','1','2','3','4','5','6','7','8','9','Skip','Reverse','+2'];
   const cards = [];
+
   for (let i = 0; i < n; i++) {
-    const color = colors[Math.floor(Math.random() * colors.length)];
-    const value = values[Math.floor(Math.random() * values.length)];
-    cards.push({ color, value });
+    if (Math.random() < 0.15) {
+      const wildCard = Math.random() < 0.5 ? 'Wild' : '+4';
+      cards.push({ color: 'Wild', value: wildCard });
+    } else {
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const value = values[Math.floor(Math.random() * values.length)];
+      cards.push({ color, value });
+    }
   }
   return cards;
 }
@@ -35,7 +39,6 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let playerName = null;
 
-  // 🔹 Lobby: Join or create
   socket.on('join-game', ({ name, code, isHost }) => {
     if (!rooms[code]) {
       if (!isHost) return;
@@ -44,7 +47,8 @@ io.on('connection', (socket) => {
         players: [],
         gameStarted: false,
         topCard: null,
-        turnIndex: 0
+        turnIndex: 0,
+        direction: 1,
       };
     }
 
@@ -56,7 +60,7 @@ io.on('connection', (socket) => {
 
     playerName = name;
     currentRoom = code;
-    socket.join(code); // ✅ ADDED REQUIRED LINE
+    socket.join(code);
     room.players.push({ name, id: socket.id, hand: [], ready: false });
 
     const allNames = room.players.map(p => p.name);
@@ -78,6 +82,7 @@ io.on('connection', (socket) => {
     });
     room.topCard = drawCards(1)[0];
     room.turnIndex = 0;
+    room.direction = 1;
     room.gameStarted = true;
 
     room.players.forEach(p => {
@@ -85,7 +90,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 🔹 Actual Game Logic from game.html
   socket.on('joinGame', (name) => {
     const code = socket.handshake.headers.referer.split('?code=')[1]?.split('&')[0];
     const room = rooms[code];
@@ -148,16 +152,47 @@ io.on('connection', (socket) => {
     if (!player) return;
 
     const index = player.hand.findIndex(c => c.color === card.color && c.value === card.value);
-    if (index !== -1) {
-      player.hand.splice(index, 1);
-      room.topCard = card;
-      io.in(currentRoom).emit('updateTopCard', card);
-      socket.emit('updateHand', player.hand);
+    if (index === -1) return;
 
-      if (player.hand.length === 0) {
-        io.in(currentRoom).emit('gameOver', { winner: player.name });
-      }
+    player.hand.splice(index, 1);
+    room.topCard = card;
+
+    // Wild Card color selection simulation
+    if (card.color === 'Wild') {
+      // Set to a random color
+      const randomColor = ['Red', 'Green', 'Blue', 'Yellow'][Math.floor(Math.random() * 4)];
+      card.color = randomColor;
     }
+
+    if (card.value === 'Reverse') {
+      room.direction *= -1;
+    } else if (card.value === 'Skip') {
+      room.turnIndex = nextTurnIndex(room, 2);
+    } else if (card.value === '+2') {
+      const target = getPlayerAtOffset(room, 1);
+      if (target) target.hand.push(...drawCards(2));
+      room.turnIndex = nextTurnIndex(room, 2);
+    } else if (card.value === '+4') {
+      const target = getPlayerAtOffset(room, 1);
+      if (target) target.hand.push(...drawCards(4));
+      room.turnIndex = nextTurnIndex(room, 2);
+    } else {
+      room.turnIndex = nextTurnIndex(room, 1);
+    }
+
+    io.in(currentRoom).emit('updateTopCard', card);
+    socket.emit('updateHand', player.hand);
+
+    if (player.hand.length === 0) {
+      io.in(currentRoom).emit('gameOver', { winner: player.name });
+      return;
+    }
+
+    room.players.forEach((p, i) => {
+      io.to(p.id).emit('yourTurn', i === room.turnIndex);
+    });
+
+    sendUpdate(currentRoom);
   });
 
   socket.on('disconnect', () => {
@@ -167,6 +202,16 @@ io.on('connection', (socket) => {
       sendUpdate(currentRoom);
     }
   });
+
+  function nextTurnIndex(room, skip = 1) {
+    const len = room.players.length;
+    return (room.turnIndex + skip * room.direction + len) % len;
+  }
+
+  function getPlayerAtOffset(room, offset) {
+    const idx = (room.turnIndex + offset * room.direction + room.players.length) % room.players.length;
+    return room.players[idx];
+  }
 
   function sendUpdate(code) {
     const room = rooms[code];
