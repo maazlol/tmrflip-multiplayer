@@ -111,26 +111,27 @@
 
   <script>
     const socket = io();
-    let myName = '';
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const myName = urlParams.get("name");
 
-    // Assume name is already set before loading game.html
-    fetch('/getName')
-      .then(res => res.json())
-      .then(data => {
-        myName = data.name;
-        socket.emit('joinGame', myName);
-      });
+    if (!code || !myName) {
+      alert("Missing name or room code.");
+      window.location.href = "/index.html";
+    }
+
+    socket.emit("joinGame", myName);
 
     function sendReady() {
-      socket.emit('playerReady');
+      socket.emit("playerReady");
     }
 
     function drawCard() {
-      socket.emit('drawCard');
+      socket.emit("drawCard");
     }
 
     function playCard(card) {
-      socket.emit('playCard', card);
+      socket.emit("playCard", card);
     }
 
     function renderPlayers(players, handCounts, currentPlayerName) {
