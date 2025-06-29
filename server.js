@@ -1,3 +1,4 @@
+// tmrflip - Full Server.js supporting waiting.html + game.html
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -5,16 +6,14 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-let globalPlayers = [];
-let gameStarted = false;
-let gameTopCard = null;
-let gameTurnIndex = 0;
+// Game Rooms Map
+const rooms = {}; // key = code
 
+// Route for game.html name setup
 app.get('/getName', (req, res) => {
   const name = 'Player' + Math.floor(Math.random() * 10000);
   res.json({ name });
@@ -32,84 +31,154 @@ function drawCards(n = 1) {
   return cards;
 }
 
-function sendUpdate(currentTurn = null) {
-  const players = globalPlayers.map(p => p.name);
-  const handCounts = globalPlayers.map(p => p.hand.length);
-  const currentPlayer = currentTurn !== null ? globalPlayers[currentTurn]?.name : null;
-  io.emit('updatePlayers', { players, handCounts, currentPlayer });
-}
+io.on('connection', (socket) => {
+  let currentRoom = null;
+  let playerName = null;
 
-io.on('connection', socket => {
+  // 🔹 Lobby: Join or create
+  socket.on('join-game', ({ name, code, isHost }) => {
+    if (!rooms[code]) {
+      if (!isHost) return;
+      rooms[code] = {
+        host: name,
+        players: [],
+        gameStarted: false,
+        topCard: null,
+        turnIndex: 0
+      };
+    }
+
+    const room = rooms[code];
+    if (room.players.find(p => p.name === name)) {
+      socket.emit('name-taken');
+      return;
+    }
+
+    playerName = name;
+    currentRoom = code;
+    room.players.push({ name, id: socket.id, hand: [], ready: false });
+
+    const allNames = room.players.map(p => p.name);
+    io.to(socket.id).emit('player-list', allNames);
+    io.to(socket.id).emit('chat-message', { name: 'System', message: `You joined room ${code}` });
+    io.to(socket.id).emit('player-list', allNames);
+    io.to(socket.id).emit('chat-message', { name: 'System', message: `${name} joined.` });
+
+    io.in(code).emit('player-list', allNames);
+  });
+
+  socket.on('chat-message', ({ code, name, message }) => {
+    io.in(code).emit('chat-message', { name, message });
+  });
+
+  socket.on('start-game', ({ code, name }) => {
+    const room = rooms[code];
+    if (!room || room.host !== name || room.players.length < 2) return;
+
+    room.players.forEach(p => {
+      p.hand = drawCards(5);
+      p.ready = false;
+    });
+    room.topCard = drawCards(1)[0];
+    room.turnIndex = 0;
+    room.gameStarted = true;
+
+    room.players.forEach(p => {
+      io.to(p.id).emit('deal-hand');
+    });
+  });
+
+  // 🔹 Actual Game Logic from game.html
   socket.on('joinGame', (name) => {
-    if (globalPlayers.find(p => p.name === name)) {
+    const code = socket.handshake.headers.referer.split('?code=')[1]?.split('&')[0];
+    const room = rooms[code];
+    if (!room) return;
+
+    if (room.players.find(p => p.name === name && p.id !== socket.id)) {
       socket.emit('joinFailed', 'Name already taken.');
       return;
     }
-    const newPlayer = {
-      name,
-      id: socket.id,
-      hand: drawCards(5),
-      ready: false
-    };
-    globalPlayers.push(newPlayer);
-    socket.name = name;
-    sendUpdate();
+
+    const player = room.players.find(p => p.name === name);
+    if (player) player.id = socket.id;
+    playerName = name;
+    currentRoom = code;
+
+    sendUpdate(code);
   });
 
   socket.on('playerReady', () => {
-    const player = globalPlayers.find(p => p.name === socket.name);
+    const room = rooms[currentRoom];
+    const player = room?.players.find(p => p.name === playerName);
     if (player) player.ready = true;
-    sendUpdate();
 
-    if (globalPlayers.length > 1 && globalPlayers.every(p => p.ready) && !gameStarted) {
-      gameStarted = true;
-      gameTopCard = drawCards(1)[0];
-      gameTurnIndex = 0;
-      io.emit('startGame');
-      io.emit('updateTopCard', gameTopCard);
+    sendUpdate(currentRoom);
 
-      globalPlayers.forEach((p, i) => {
+    if (
+      room &&
+      !room.gameStarted &&
+      room.players.length >= 2 &&
+      room.players.every(p => p.ready)
+    ) {
+      room.gameStarted = true;
+      room.topCard = drawCards(1)[0];
+      room.turnIndex = 0;
+      io.in(currentRoom).emit('startGame');
+      io.in(currentRoom).emit('updateTopCard', room.topCard);
+
+      room.players.forEach((p, i) => {
         io.to(p.id).emit('updateHand', p.hand);
-        io.to(p.id).emit('yourTurn', i === gameTurnIndex);
+        io.to(p.id).emit('yourTurn', i === room.turnIndex);
       });
 
-      sendUpdate(gameTurnIndex);
+      sendUpdate(currentRoom);
     }
   });
 
   socket.on('drawCard', () => {
-    const player = globalPlayers.find(p => p.name === socket.name);
+    const room = rooms[currentRoom];
+    const player = room?.players.find(p => p.name === playerName);
     if (player) {
-      const newCard = drawCards(1)[0];
-      player.hand.push(newCard);
+      const card = drawCards(1)[0];
+      player.hand.push(card);
       socket.emit('updateHand', player.hand);
     }
   });
 
   socket.on('playCard', (card) => {
-    const player = globalPlayers.find(p => p.name === socket.name);
+    const room = rooms[currentRoom];
+    const player = room?.players.find(p => p.name === playerName);
     if (!player) return;
 
     const index = player.hand.findIndex(c => c.color === card.color && c.value === card.value);
     if (index !== -1) {
       player.hand.splice(index, 1);
-      io.emit('updateTopCard', card);
+      room.topCard = card;
+      io.in(currentRoom).emit('updateTopCard', card);
       socket.emit('updateHand', player.hand);
 
       if (player.hand.length === 0) {
-        io.emit('gameOver', { winner: player.name });
+        io.in(currentRoom).emit('gameOver', { winner: player.name });
       }
     }
   });
 
   socket.on('disconnect', () => {
-    globalPlayers = globalPlayers.filter(p => p.id !== socket.id);
-    sendUpdate();
+    const room = rooms[currentRoom];
+    if (room) {
+      room.players = room.players.filter(p => p.id !== socket.id);
+      sendUpdate(currentRoom);
+    }
   });
-});
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public/index.html'));
+  function sendUpdate(code) {
+    const room = rooms[code];
+    if (!room) return;
+    const players = room.players.map(p => p.name);
+    const handCounts = room.players.map(p => p.hand.length);
+    const currentPlayer = room.players[room.turnIndex]?.name;
+    io.in(code).emit('updatePlayers', { players, handCounts, currentPlayer });
+  }
 });
 
 server.listen(PORT, () => {
