@@ -12,185 +12,188 @@
       color: #fff;
       display: flex;
       flex-direction: column;
-      height: 100vh;
-    }
-    #layout {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-    }
-    #leftPlayers, #rightPlayers {
-      width: 150px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      justify-content: center;
-    }
-    #centerGame {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      position: relative;
+      padding: 20px;
     }
+
+    #playersArea {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+
     .player-box {
-      width: 120px;
-      height: 150px;
       border: 2px dashed white;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      font-size: 12px;
-      text-align: center;
-    }
-    .card-count {
-      margin-top: 10px;
-      background: white;
-      color: black;
-      border-radius: 8px;
-      padding: 4px 10px;
-      font-weight: bold;
-    }
-    #topCard, #drawDeck {
-      width: 100px;
-      height: 140px;
       border-radius: 12px;
+      width: 160px;
+      height: 110px;
+      padding: 6px;
+      color: white;
+      background-color: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .player-name {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .player-cards {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      width: 24px;
+      height: 36px;
+      border-radius: 4px;
+      background-color: gray;
+    }
+
+    #topCard {
+      font-size: 18px;
+      margin: 10px;
+      padding: 10px;
+      border: 2px solid white;
+      border-radius: 8px;
+      background-color: #222;
+    }
+
+    #yourHand {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .your-card {
+      padding: 10px;
+      border-radius: 6px;
+      background-color: #444;
+      cursor: pointer;
+    }
+
+    #drawBtn, #readyBtn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      font-size: 16px;
       background: white;
       color: black;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    #titleBanner {
+      font-size: 28px;
       font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 10px;
-      border: 2px solid #333;
-    }
-    #drawDeck {
-      background: #ccc;
-      cursor: pointer;
-    }
-    #hand {
-      display: flex;
-      justify-content: center;
-      padding: 10px;
-      background: #111;
-      overflow-x: auto;
-      border-top: 2px solid #222;
-    }
-    .card {
-      min-width: 60px;
-      height: 90px;
-      background: white;
-      border-radius: 8px;
-      border: 1px solid #333;
-      margin: 0 5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      cursor: pointer;
-      color: #000;
-    }
-    #status {
-      text-align: center;
-      padding: 5px;
-      color: #ccc;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 <body>
-  <div id="status">Connecting...</div>
-  <div id="layout">
-    <div id="leftPlayers"></div>
-    <div id="centerGame">
-      <div id="drawDeck">Deck</div>
-      <div id="topCard">Top</div>
-      <div id="hand"></div>
-    </div>
-    <div id="rightPlayers"></div>
-  </div>
+  <div id="titleBanner">tmrflip</div>
+
+  <button id="readyBtn" onclick="sendReady()">I'm Ready</button>
+  <div id="topCard">Top Card: -</div>
+  <div id="playersArea"></div>
+  <div id="yourHand"></div>
+  <button id="drawBtn" onclick="drawCard()">Draw Card</button>
+
   <script>
     const socket = io();
-    const urlParams = new URLSearchParams(window.location.search);
-    let roomCode = urlParams.get("code");
-    let playerName = urlParams.get("name");
+    let myName = '';
 
-    if (!playerName || !roomCode) {
-      playerName = localStorage.getItem("tmrflip-name");
-      roomCode = localStorage.getItem("tmrflip-room");
+    // Assume name is already set before loading game.html
+    fetch('/getName')
+      .then(res => res.json())
+      .then(data => {
+        myName = data.name;
+        socket.emit('joinGame', myName);
+      });
+
+    function sendReady() {
+      socket.emit('playerReady');
     }
 
-    if (!playerName || !roomCode) {
-      alert("Missing name or room.");
-      window.location.href = "index.html";
-    } else {
-      localStorage.setItem("tmrflip-name", playerName);
-      localStorage.setItem("tmrflip-room", roomCode);
+    function drawCard() {
+      socket.emit('drawCard');
     }
 
-    const handDiv = document.getElementById("hand");
-    const topCardDiv = document.getElementById("topCard");
-    const drawDeck = document.getElementById("drawDeck");
-    const statusDiv = document.getElementById("status");
-    const leftPlayers = document.getElementById("leftPlayers");
-    const rightPlayers = document.getElementById("rightPlayers");
+    function playCard(card) {
+      socket.emit('playCard', card);
+    }
 
-    socket.emit("joinGameRoom", { name: playerName, room: roomCode });
-    console.log("EMITTED joinGameRoom", playerName, roomCode);
+    function renderPlayers(players, handCounts, currentPlayerName) {
+      const area = document.getElementById('playersArea');
+      area.innerHTML = '';
 
-    socket.on("gameState", (state) => {
-      console.log("RECEIVED gameState", state);
+      players.forEach((name, i) => {
+        const box = document.createElement('div');
+        box.className = 'player-box';
 
-      const player = state.players.find(p => p.name === playerName);
-      if (!player) return;
+        const nameEl = document.createElement('div');
+        nameEl.className = 'player-name';
+        nameEl.textContent = name + (name === currentPlayerName ? ' 👑' : '');
 
-      topCardDiv.textContent = `${state.topCard.color} ${state.topCard.value}`;
-      console.log("Top card is:", state.topCard);
+        const cards = document.createElement('div');
+        cards.className = 'player-cards';
 
+        const count = handCounts[i];
+        for (let j = 0; j < count; j++) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          cards.appendChild(card);
+        }
+
+        box.appendChild(nameEl);
+        box.appendChild(cards);
+        area.appendChild(box);
+      });
+    }
+
+    socket.on('joinFailed', (msg) => alert(msg));
+
+    socket.on('startGame', () => {
+      document.getElementById('readyBtn').style.display = 'none';
+    });
+
+    socket.on('updateTopCard', (card) => {
+      document.getElementById('topCard').textContent = `Top Card: ${card.color} ${card.value}`;
+    });
+
+    socket.on('updateHand', (hand) => {
+      const handDiv = document.getElementById('yourHand');
       handDiv.innerHTML = '';
-      player.hand.forEach((card, index) => {
-        const el = document.createElement("div");
-        el.className = "card";
-        el.textContent = `${card.color} ${card.value}`;
-        el.onclick = () => {
-          if (state.currentTurn === playerName) {
-            socket.emit("playCard", { room: roomCode, card, index });
-          }
-        };
-        if (state.currentTurn !== playerName) el.style.opacity = 0.4;
+      hand.forEach(card => {
+        const el = document.createElement('div');
+        el.className = 'your-card';
+        el.style.backgroundColor = card.color.toLowerCase();
+        el.textContent = card.value;
+        el.onclick = () => playCard(card);
         handDiv.appendChild(el);
       });
-
-      const others = state.players.filter(p => p.name !== playerName);
-      leftPlayers.innerHTML = '';
-      rightPlayers.innerHTML = '';
-      others.forEach((p, i) => {
-        const box = document.createElement("div");
-        box.className = "player-box";
-        box.innerHTML = `<div>${p.name}</div><div class="card-count">+${p.hand.length}</div>`;
-        if (i % 2 === 0) leftPlayers.appendChild(box);
-        else rightPlayers.appendChild(box);
-      });
-
-      statusDiv.textContent = state.currentTurn === playerName ? "Your Turn" : `Waiting for ${state.currentTurn}...`;
     });
 
-    drawDeck.onclick = () => {
-      socket.emit("drawCard", { room: roomCode });
-    };
-
-    socket.on("invalidMove", (msg) => {
-      alert(msg);
+    socket.on('yourTurn', (yes) => {
+      document.getElementById('drawBtn').disabled = !yes;
     });
 
-    socket.on("gameOver", (winner) => {
-      alert(`Game Over! Winner: ${winner}`);
-      localStorage.removeItem("tmrflip-name");
-      localStorage.removeItem("tmrflip-room");
-      window.location.href = "index.html";
+    socket.on('updatePlayers', ({ players, handCounts, currentPlayer }) => {
+      renderPlayers(players, handCounts, currentPlayer);
+    });
+
+    socket.on('gameOver', ({ winner }) => {
+      alert(`${winner} has won the game!`);
     });
   </script>
 </body>
