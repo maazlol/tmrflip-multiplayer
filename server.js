@@ -1,4 +1,3 @@
-// tmrflip - Full Server.js supporting waiting.html + game.html with full UNO logic
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
