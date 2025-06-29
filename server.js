@@ -59,12 +59,8 @@ io.on('connection', (socket) => {
     room.players.push({ name, id: socket.id, hand: [], ready: false });
 
     const allNames = room.players.map(p => p.name);
-    io.to(socket.id).emit('player-list', allNames);
-    io.to(socket.id).emit('chat-message', { name: 'System', message: `You joined room ${code}` });
-    io.to(socket.id).emit('player-list', allNames);
-    io.to(socket.id).emit('chat-message', { name: 'System', message: `${name} joined.` });
-
     io.in(code).emit('player-list', allNames);
+    io.in(code).emit('chat-message', { name: 'System', message: `${name} joined.` });
   });
 
   socket.on('chat-message', ({ code, name, message }) => {
