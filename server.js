@@ -91,7 +91,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // --- main change: joinGame will assign pregame hand if not assigned
+  // --- FIXED: Defensive joinGame (no undefined hand error)
   socket.on('joinGame', (name) => {
     const code = socket.handshake.headers.referer.split('?code=')[1]?.split('&')[0];
     const room = rooms[code];
@@ -103,18 +103,22 @@ io.on('connection', (socket) => {
     }
 
     const player = room.players.find(p => p.name === name);
-    if (player) player.id = socket.id;
-    playerName = name;
-    currentRoom = code;
+    if (player) {
+      player.id = socket.id;
+      playerName = name;
+      currentRoom = code;
 
-    // Pregame: Give hand if not already assigned
-    if (player && (!player.hand || player.hand.length === 0)) {
-      player.hand = drawCards(5);
+      // Pregame: Give hand if not already assigned
+      if (!player.hand || player.hand.length === 0) {
+        player.hand = drawCards(5);
+      }
+      // Always send hand on join, so game.html can show cards
+      socket.emit('updateHand', player.hand);
+
+      sendUpdate(code);
+    } else {
+      socket.emit('joinFailed', 'Player not found in this room.');
     }
-    // Always send hand on join, so game.html can show cards
-    socket.emit('updateHand', player.hand);
-
-    sendUpdate(code);
   });
 
   socket.on('playerReady', () => {
