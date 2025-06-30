@@ -38,6 +38,8 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let playerName = null;
 
+  // NO CHANGE: waiting.html, index.html logic remains as is
+
   socket.on('join-game', ({ name, code, isHost }) => {
     if (!rooms[code]) {
       if (!isHost) return;
@@ -89,6 +91,7 @@ io.on('connection', (socket) => {
     });
   });
 
+  // --- main change: joinGame will assign pregame hand if not assigned
   socket.on('joinGame', (name) => {
     const code = socket.handshake.headers.referer.split('?code=')[1]?.split('&')[0];
     const room = rooms[code];
@@ -103,6 +106,13 @@ io.on('connection', (socket) => {
     if (player) player.id = socket.id;
     playerName = name;
     currentRoom = code;
+
+    // Pregame: Give hand if not already assigned
+    if (player && (!player.hand || player.hand.length === 0)) {
+      player.hand = drawCards(5);
+    }
+    // Always send hand on join, so game.html can show cards
+    socket.emit('updateHand', player.hand);
 
     sendUpdate(code);
   });
@@ -212,13 +222,18 @@ io.on('connection', (socket) => {
     return room.players[idx];
   }
 
+  // --- main change: sendUpdate now includes readyCounts for game.html
   function sendUpdate(code) {
     const room = rooms[code];
     if (!room) return;
     const players = room.players.map(p => p.name);
     const handCounts = room.players.map(p => p.hand.length);
     const currentPlayer = room.players[room.turnIndex]?.name;
-    io.in(code).emit('updatePlayers', { players, handCounts, currentPlayer });
+    const readyCounts = {
+      ready: room.players.filter(p => p.ready).length,
+      total: room.players.length
+    };
+    io.in(code).emit('updatePlayers', { players, handCounts, currentPlayer, readyCounts });
   }
 });
 
