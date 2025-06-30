@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname, 'public')));
 
 const rooms = {};
+const disconnectTimers = {}; // socket.id -> timeoutId
 
 app.get('/getName', (req, res) => {
   const name = 'Player' + Math.floor(Math.random() * 10000);
@@ -38,8 +39,7 @@ io.on('connection', (socket) => {
   let currentRoom = null;
   let playerName = null;
 
-  // NO CHANGE: waiting.html, index.html logic remains as is
-
+  // --- WAITING PAGE: New player joins (host or guest)
   socket.on('join-game', ({ name, code, isHost }) => {
     if (!rooms[code]) {
       if (!isHost) return;
@@ -62,7 +62,7 @@ io.on('connection', (socket) => {
     playerName = name;
     currentRoom = code;
     socket.join(code);
-    room.players.push({ name, id: socket.id, hand: [], ready: false });
+    room.players.push({ name, id: socket.id, hand: [], ready: false, connected: true });
 
     const allNames = room.players.map(p => p.name);
     io.in(code).emit('player-list', allNames);
@@ -91,22 +91,29 @@ io.on('connection', (socket) => {
     });
   });
 
-  // --- FIXED: Defensive joinGame (no undefined hand error)
+  // --- GAME PAGE: Player reconnects or joins game.html
   socket.on('joinGame', (name) => {
+    // Room code is always in URL params, so extract from referer
     const code = socket.handshake.headers.referer.split('?code=')[1]?.split('&')[0];
     const room = rooms[code];
     if (!room) return;
 
-    if (room.players.find(p => p.name === name && p.id !== socket.id)) {
-      socket.emit('joinFailed', 'Name already taken.');
-      return;
-    }
-
     const player = room.players.find(p => p.name === name);
+
     if (player) {
-      player.id = socket.id;
+      // If player was "disconnected", clear disconnect timer and update id
+      if (player.id !== socket.id) {
+        // Clear disconnect timer if active
+        if (disconnectTimers[player.id]) {
+          clearTimeout(disconnectTimers[player.id]);
+          delete disconnectTimers[player.id];
+        }
+        player.id = socket.id;
+      }
+      player.connected = true;
       playerName = name;
       currentRoom = code;
+      socket.join(code);
 
       // Pregame: Give hand if not already assigned
       if (!player.hand || player.hand.length === 0) {
@@ -209,10 +216,28 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    const room = rooms[currentRoom];
-    if (room) {
-      room.players = room.players.filter(p => p.id !== socket.id);
-      sendUpdate(currentRoom);
+    if (currentRoom && playerName) {
+      const room = rooms[currentRoom];
+      const player = room?.players.find(p => p.name === playerName);
+      if (player) {
+        player.connected = false;
+        // Only start timer if not already started
+        if (!disconnectTimers[socket.id]) {
+          disconnectTimers[socket.id] = setTimeout(() => {
+            // Remove player if not reconnected in 45 seconds
+            const idx = room.players.findIndex(p => p.name === playerName);
+            if (idx !== -1 && room.players[idx].connected === false) {
+              room.players.splice(idx, 1);
+              sendUpdate(currentRoom);
+              // If no players left, delete room
+              if (room.players.length === 0) {
+                delete rooms[currentRoom];
+              }
+            }
+            delete disconnectTimers[socket.id];
+          }, 45000); // 45 seconds
+        }
+      }
     }
   });
 
