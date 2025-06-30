@@ -4,231 +4,456 @@
   <meta charset="UTF-8">
   <title>tmrflip - Game</title>
   <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="game.css">
   <style>
     body {
       margin: 0;
-      font-family: sans-serif;
+      font-family: 'Comic Sans MS', sans-serif;
       background: #000;
       color: #fff;
+      overflow: hidden;
+    }
+    #tmr-title {
+      position: absolute;
+      top: 15px; left: 32px;
+      font-size: 2em;
+      letter-spacing: 2px;
+    }
+    #table-area {
+      position: absolute;
+      top: 100px; left: 0; right: 0;
+      height: 260px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1;
+    }
+    #deck-pile, #discard-pile {
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      margin: 0 40px;
     }
-
-    #playersArea {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      padding: 10px;
-      justify-content: center;
-      margin-bottom: 20px;
-    }
-
-    .player-box {
-      border: 2px dashed white;
-      border-radius: 12px;
-      width: 160px;
-      height: 110px;
-      padding: 6px;
-      color: white;
-      background-color: #111;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .player-name {
-      font-weight: bold;
-      font-size: 14px;
-    }
-
-    .player-cards {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .card {
-      width: 24px;
-      height: 36px;
-      border-radius: 4px;
-      background-color: gray;
-    }
-
-    #topCard {
-      font-size: 18px;
-      margin: 10px;
-      padding: 10px;
-      border: 2px solid white;
-      border-radius: 8px;
-      background-color: #222;
-    }
-
-    #readyStatus {
-      font-size: 16px;
+    #discard-pile .pile-card {
+      width: 90px; height: 140px;
+      background: #222;
+      border: 2px solid #fff;
+      font-size: 2em;
+      display: flex; align-items: center; justify-content: center;
       margin-bottom: 8px;
-      font-weight: bold;
-      letter-spacing: 1px;
+      border-radius: 12px;
     }
-
-    #yourHand {
-      display: flex;
-      gap: 8px;
-      margin-top: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .your-card {
-      padding: 10px;
-      border-radius: 6px;
-      background-color: #444;
+    #deck-pile .pile-card {
+      width: 90px; height: 140px;
+      background: #333;
+      border: 2px solid #fff;
+      font-size: 2em;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      min-width: 36px;
-      min-height: 45px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-weight: bold;
-      font-size: 15px;
-      border: 2px solid #222;
-      transition: transform 0.1s;
     }
-    .your-card:hover {
-      transform: translateY(-5px) scale(1.1);
-      border: 2px solid yellow;
-      z-index: 2;
-    }
-
-    #drawBtn, #readyBtn {
-      margin-top: 15px;
-      padding: 10px 20px;
-      font-size: 16px;
-      background: white;
-      color: black;
+    #draw-btn {
+      background: #fff;
+      color: #000;
+      border-radius: 6px;
       border: none;
-      border-radius: 6px;
+      padding: 8px 20px;
+      font-size: 16px;
+      font-family: inherit;
       cursor: pointer;
+      margin-top: 6px;
     }
-
-    #drawBtn[disabled] {
+    #draw-btn[disabled] {
       background: #ccc;
       color: #888;
       cursor: not-allowed;
     }
-
-    #titleBanner {
-      font-size: 28px;
+    #left-player, #right-player {
+      position: absolute;
+      top: 35%;
+      width: 120px;
+      height: 130px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;
+    }
+    #left-player { left: 30px; }
+    #right-player { right: 30px; }
+    .opponent-cards {
+      display: flex;
+      gap: 3px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .card-back {
+      width: 34px; height: 48px;
+      background: #555;
+      border: 2px solid #fff;
+      border-radius: 6px;
+      margin-bottom: 2px;
+    }
+    .opponent-name {
+      font-size: 1.1em;
+      text-align: center;
+    }
+    #my-hand {
+      position: absolute;
+      bottom: 32px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 10px;
+      z-index: 2;
+    }
+    .your-card {
+      min-width: 44px; min-height: 62px;
+      background: #444;
+      border-radius: 7px;
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 1.2em;
       font-weight: bold;
-      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 1px 2px 6px #000a;
+      transition: transform 0.1s;
+    }
+    .your-card:hover {
+      transform: translateY(-8px) scale(1.12);
+      border: 2px solid yellow;
+      z-index: 2;
+      background: #666;
+    }
+    #chat-popup {
+      position: fixed;
+      right: 24px; bottom: 24px;
+      width: 300px;
+      background: #191919;
+      border-radius: 12px;
+      box-shadow: 0 0 10px #000d;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      transition: all 0.15s;
+    }
+    #chat-header {
+      background: #242424;
+      padding: 8px 12px;
+      border-radius: 12px 12px 0 0;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+    }
+    #chat-header span {
+      font-size: 1.3em;
+      color: #fff;
+      margin-left: 8px;
+      font-weight: normal;
+      transition: color 0.1s;
+    }
+    #chat-header span:hover {
+      color: #f55;
+    }
+    #chat-messages {
+      height: 180px;
+      overflow-y: auto;
+      padding: 10px;
+      font-size: 1em;
+    }
+    #chat-input {
+      width: 76%;
+      margin: 5px;
+      border-radius: 6px;
+      font-size: 1em;
+      border: 1px solid #999;
+      background: #222;
+      color: #fff;
+      padding: 4px 8px;
+    }
+    #chat-send {
+      width: 20%;
+      background: #333;
+      color: #fff;
+      border-radius: 6px;
+      border: none;
+      font-size: 1em;
+      cursor: pointer;
+      margin: 5px;
+    }
+    #chat-minimized {
+      display: none;
+      position: fixed;
+      right: 24px; bottom: 24px;
+      background: #191919;
+      color: #fff;
+      border-radius: 10px 10px 0 0;
+      padding: 8px 24px;
+      font-size: 1.1em;
+      box-shadow: 0 0 8px #000a;
+      cursor: pointer;
+      z-index: 101;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .my-turn-glow {
+      box-shadow: 0 0 8px 2px yellow;
+      border-color: yellow !important;
+    }
+    #readyBtn {
+      position: absolute;
+      top: 35px;
+      right: 40px;
+      font-size: 16px;
+      background: #fff;
+      color: #222;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 26px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 101;
+      transition: background 0.15s;
+    }
+    #readyBtn:hover {
+      background: #ffe24a;
+      color: #111;
+    }
+    #readyStatus {
+      position: absolute;
+      top: 77px;
+      right: 47px;
+      font-size: 1.08em;
+      letter-spacing: 1px;
+      z-index: 101;
+      color: #ffe24a;
+      font-weight: bold;
+    }
+    @media (max-width: 700px) {
+      #left-player, #right-player { display: none; }
+      #chat-popup, #chat-minimized { width: 98vw; right: 1vw; }
+      #readyBtn, #readyStatus { right: 10vw;}
     }
   </style>
 </head>
 <body>
-  <div id="titleBanner">tmrflip</div>
-  <div id="readyStatus">Ready: 0/0</div>
-
-  <button id="readyBtn" onclick="sendReady()">I'm Ready</button>
-  <div id="topCard">Top Card: -</div>
-  <div id="playersArea"></div>
-  <div id="yourHand"></div>
-  <button id="drawBtn" onclick="drawCard()">Draw Card</button>
-
+  <div id="tmr-title">tmrflip</div>
+  <button id="readyBtn" onclick="sendReady()">Ready</button>
+  <div id="readyStatus"></div>
+  <div id="table-area">
+    <div id="discard-pile">
+      <div class="pile-card" id="discard-card">-</div>
+      <div class="label">Discard</div>
+    </div>
+    <div id="deck-pile">
+      <div class="pile-card" id="deck-card" onclick="drawCard()">?</div>
+      <button id="draw-btn" onclick="drawCard()">Draw Card</button>
+    </div>
+  </div>
+  <div id="left-player"></div>
+  <div id="right-player"></div>
+  <div id="my-hand"></div>
+  <!-- Chat Popup -->
+  <div id="chat-popup">
+    <div id="chat-header">
+      <span>Chat</span>
+      <span id="chat-close" title="Hide chat" aria-label="Hide chat">&times;</span>
+    </div>
+    <div id="chat-messages"></div>
+    <input id="chat-input" type="text" placeholder="Type..." autocomplete="off" />
+    <button id="chat-send">Send</button>
+  </div>
+  <div id="chat-minimized">Chat</div>
   <script>
     const socket = io();
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
     const myName = urlParams.get("name");
+    let allPlayers = [];
+    let handCounts = [];
+    let myHand = [];
+    let currentPlayer = "";
+    let myIndex = 0;
 
     if (!code || !myName) {
       alert("Missing name or room code.");
       window.location.href = "/index.html";
     }
 
-    socket.emit("joinGame", myName);
-
-    function sendReady() {
-      socket.emit("playerReady");
+    // --- Player POV arrangement ---
+    function rotatePlayers(players, me) {
+      const idx = players.indexOf(me);
+      if (idx === -1) return players;
+      return players.slice(idx).concat(players.slice(0, idx));
+    }
+    function rotateHandCounts(counts, idx) {
+      return counts.slice(idx).concat(counts.slice(0, idx));
     }
 
-    function drawCard() {
-      socket.emit("drawCard");
+    // --- Rendering functions ---
+    function renderOpponents(players, counts) {
+      // left: previous player, right: next player
+      document.getElementById('left-player').innerHTML = '';
+      document.getElementById('right-player').innerHTML = '';
+      if (players.length < 2) return;
+      // For 2+ players, left = last, right = next
+      const leftIdx = (players.length - 1);
+      const rightIdx = 1 % players.length;
+      // Left
+      if (players.length > 2) {
+        const leftDiv = document.getElementById('left-player');
+        leftDiv.innerHTML = `
+          <div class="opponent-cards">${'<div class="card-back"></div>'.repeat(counts[leftIdx])}</div>
+          <div class="opponent-name">${players[leftIdx]}</div>
+        `;
+      }
+      // Right
+      const rightDiv = document.getElementById('right-player');
+      rightDiv.innerHTML = `
+        <div class="opponent-cards">${'<div class="card-back"></div>'.repeat(counts[rightIdx])}</div>
+        <div class="opponent-name">${players[rightIdx]}</div>
+      `;
     }
-
-    function playCard(card) {
-      socket.emit("playCard", card);
-    }
-
-    function renderPlayers(players, handCounts, currentPlayerName) {
-      const area = document.getElementById('playersArea');
-      area.innerHTML = '';
-
-      players.forEach((name, i) => {
-        const box = document.createElement('div');
-        box.className = 'player-box';
-
-        const nameEl = document.createElement('div');
-        nameEl.className = 'player-name';
-        nameEl.textContent = name + (name === currentPlayerName ? ' 👑' : '');
-
-        const cards = document.createElement('div');
-        cards.className = 'player-cards';
-
-        const count = handCounts[i];
-        for (let j = 0; j < count; j++) {
-          const card = document.createElement('div');
-          card.className = 'card';
-          cards.appendChild(card);
-        }
-
-        box.appendChild(nameEl);
-        box.appendChild(cards);
-        area.appendChild(box);
-      });
-    }
-
-    socket.on('joinFailed', (msg) => alert(msg));
-
-    socket.on('startGame', () => {
-      document.getElementById('readyBtn').style.display = 'none';
-    });
-
-    socket.on('updateTopCard', (card) => {
-      document.getElementById('topCard').textContent = `Top Card: ${card.color} ${card.value}`;
-    });
-
-    socket.on('updateHand', (hand) => {
-      const handDiv = document.getElementById('yourHand');
+    function renderHand(hand) {
+      const handDiv = document.getElementById('my-hand');
       handDiv.innerHTML = '';
       hand.forEach(card => {
         const el = document.createElement('div');
         el.className = 'your-card';
-        el.style.backgroundColor = card.color.toLowerCase();
-        el.textContent = card.value;
+        // Colorize wilds
+        if (card.color === 'Wild') {
+          el.style.background = 'linear-gradient(135deg,#444,#fff)';
+          el.style.color = '#000';
+        } else {
+          el.style.backgroundColor = card.color ? card.color.toLowerCase() : '#444';
+        }
+        el.textContent = card.value + (card.color && card.color !== 'Wild' ? ' ' + card.color[0] : '');
         el.onclick = () => playCard(card);
         handDiv.appendChild(el);
       });
+    }
+    function renderDiscard(card) {
+      const discard = document.getElementById('discard-card');
+      if (!card) {
+        discard.textContent = '-';
+        discard.style.background = '#222';
+        return;
+      }
+      discard.textContent = `${card.value}${card.color && card.color !== "Wild" ? " " + card.color[0] : card.color === "Wild" ? " 🃏" : ""}`;
+      discard.style.background = (card.color && card.color !== 'Wild') ? card.color.toLowerCase() : '#333';
+      discard.style.color = (card.color === 'Yellow') ? '#444' : '#fff';
+    }
+
+    // --- Events and Actions ---
+    function drawCard() {
+      socket.emit("drawCard");
+    }
+    function playCard(card) {
+      // Wild color selection prompt (simple)
+      if (card.color === 'Wild') {
+        const chosenColor = prompt('Choose color: Red, Green, Blue, Yellow');
+        if (!chosenColor || !['red','green','blue','yellow'].includes(chosenColor.toLowerCase())) return;
+        card.chosenColor = chosenColor.charAt(0).toUpperCase() + chosenColor.slice(1).toLowerCase();
+      }
+      socket.emit("playCard", card);
+    }
+    function sendReady() {
+      socket.emit("playerReady");
+    }
+
+    // --- Chat logic ---
+    const chatMessages = document.getElementById('chat-messages');
+    document.getElementById('chat-send').onclick = sendChat;
+    document.getElementById('chat-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendChat();
+    });
+    function sendChat() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+      socket.emit('chat-message', { code, name: myName, message: msg });
+      input.value = '';
+    }
+    socket.on('chat-message', ({ name, message }) => {
+      const div = document.createElement('div');
+      div.innerHTML = `<b>${name}:</b> ${message}`;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    // --- Chat minimize/maximize ---
+    document.getElementById('chat-close').onclick = function(e) {
+      document.getElementById('chat-popup').style.display = 'none';
+      document.getElementById('chat-minimized').style.display = '';
+      e.stopPropagation();
+    };
+    document.getElementById('chat-minimized').onclick = function() {
+      document.getElementById('chat-popup').style.display = '';
+      document.getElementById('chat-minimized').style.display = 'none';
+    };
+
+    // --- Socket.io handlers ---
+    socket.emit("joinGame", myName);
+
+    socket.on('joinFailed', (msg) => alert(msg));
+
+    socket.on('startGame', () => {
+      document.getElementById('draw-btn').style.display = '';
+      document.getElementById('readyBtn').style.display = "none";
+      document.getElementById('readyStatus').style.display = "none";
+    });
+
+    socket.on('updateTopCard', (card) => {
+      renderDiscard(card);
+    });
+
+    socket.on('updateHand', (hand) => {
+      myHand = hand;
+      renderHand(hand);
     });
 
     socket.on('yourTurn', (yes) => {
-      document.getElementById('drawBtn').disabled = !yes;
+      document.getElementById('draw-btn').disabled = !yes;
+      // Highlight hand if your turn
+      document.getElementById('my-hand').classList.toggle('my-turn-glow', yes);
     });
 
-    // NEW: Show ready count
-    socket.on('updatePlayers', ({ players, handCounts, currentPlayer, readyCounts }) => {
+    socket.on('updatePlayers', ({ players, handCounts: counts, currentPlayer, readyCounts }) => {
+      allPlayers = players;
+      handCounts = counts;
+      myIndex = players.indexOf(myName);
+      // POV rotate
+      const rotatedPlayers = rotatePlayers(players, myName);
+      const rotatedCounts = rotateHandCounts(counts, myIndex);
+      renderOpponents(rotatedPlayers, rotatedCounts);
+      // Highlight whose turn
+      [document.getElementById('left-player'), document.getElementById('right-player')].forEach(div => div.classList.remove('my-turn-glow'));
+      if (rotatedPlayers[1] === currentPlayer) document.getElementById('right-player').classList.add('my-turn-glow');
+      if (rotatedPlayers.length > 2 && rotatedPlayers[rotatedPlayers.length-1] === currentPlayer) document.getElementById('left-player').classList.add('my-turn-glow');
+
+      // --- READY BUTTON LOGIC ---
       if (readyCounts && typeof readyCounts.ready !== "undefined" && typeof readyCounts.total !== "undefined") {
         document.getElementById('readyStatus').textContent = `Ready: ${readyCounts.ready}/${readyCounts.total}`;
+        if (readyCounts.ready === readyCounts.total) {
+          document.getElementById('readyBtn').style.display = "none";
+        } else {
+          document.getElementById('readyBtn').style.display = "";
+        }
       }
-      renderPlayers(players, handCounts, currentPlayer);
     });
 
     socket.on('gameOver', ({ winner }) => {
       alert(`${winner} has won the game!`);
     });
+
+    // On load, hide unnecessary things (no waiting, no dashed lines)
+    window.onload = () => {
+      document.getElementById('draw-btn').disabled = true;
+    };
   </script>
 </body>
 </html>
