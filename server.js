@@ -17,11 +17,11 @@ app.get('/getName', (req, res) => {
   res.json({ name });
 });
 
+// Official UNO deck (no stacking, no house rules, all actions as per official)
 function drawCards(n = 1) {
   const colors = ['Red', 'Green', 'Blue', 'Yellow'];
   const values = ['0','1','2','3','4','5','6','7','8','9','Skip','Reverse','+2'];
   const cards = [];
-
   for (let i = 0; i < n; i++) {
     if (Math.random() < 0.15) {
       const wildCard = Math.random() < 0.5 ? 'Wild' : '+4';
@@ -50,6 +50,7 @@ io.on('connection', (socket) => {
         topCard: null,
         turnIndex: 0,
         direction: 1,
+        previousTopCardColor: null // for +4 challenge (not implemented, but future ready)
       };
     }
 
@@ -62,7 +63,7 @@ io.on('connection', (socket) => {
     playerName = name;
     currentRoom = code;
     socket.join(code);
-    room.players.push({ name, id: socket.id, hand: [], ready: false, connected: true });
+    room.players.push({ name, id: socket.id, hand: [], ready: false, connected: true, calledTMR: false });
 
     const allNames = room.players.map(p => p.name);
     io.in(code).emit('player-list', allNames);
@@ -78,8 +79,9 @@ io.on('connection', (socket) => {
     if (!room || room.host !== name || room.players.length < 2) return;
 
     room.players.forEach(p => {
-      p.hand = drawCards(5);
+      p.hand = drawCards(7);
       p.ready = false;
+      p.calledTMR = false;
     });
     room.topCard = drawCards(1)[0];
     room.turnIndex = 0;
@@ -93,7 +95,6 @@ io.on('connection', (socket) => {
 
   // --- GAME PAGE: Player reconnects or joins game.html
   socket.on('joinGame', (name) => {
-    // Room code is always in URL params, so extract from referer
     const code = socket.handshake.headers.referer.split('?code=')[1]?.split('&')[0];
     const room = rooms[code];
     if (!room) return;
@@ -101,9 +102,7 @@ io.on('connection', (socket) => {
     const player = room.players.find(p => p.name === name);
 
     if (player) {
-      // If player was "disconnected", clear disconnect timer and update id
       if (player.id !== socket.id) {
-        // Clear disconnect timer if active
         if (disconnectTimers[player.id]) {
           clearTimeout(disconnectTimers[player.id]);
           delete disconnectTimers[player.id];
@@ -115,11 +114,9 @@ io.on('connection', (socket) => {
       currentRoom = code;
       socket.join(code);
 
-      // Pregame: Give hand if not already assigned
       if (!player.hand || player.hand.length === 0) {
-        player.hand = drawCards(5);
+        player.hand = drawCards(7);
       }
-      // Always send hand on join, so game.html can show cards
       socket.emit('updateHand', player.hand);
 
       sendUpdate(code);
@@ -156,37 +153,61 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('drawCard', () => {
-    const room = rooms[currentRoom];
-    const player = room?.players.find(p => p.name === playerName);
-    if (player) {
-      const card = drawCards(1)[0];
-      player.hand.push(card);
-      socket.emit('updateHand', player.hand);
-    }
-  });
-
+  // --- Official UNO: Only play if valid (color/value/Wild)
   socket.on('playCard', (card) => {
     const room = rooms[currentRoom];
     const player = room?.players.find(p => p.name === playerName);
     if (!player) return;
 
-    const index = player.hand.findIndex(c => c.color === card.color && c.value === card.value);
-    if (index === -1) return;
+    // Only allow if it's this player's turn
+    if (room.players[room.turnIndex]?.name !== playerName) return;
 
-    player.hand.splice(index, 1);
-    room.topCard = card;
+    const top = room.topCard;
+    const isValid =
+      card.color === 'Wild' ||
+      card.color === top.color ||
+      card.value === top.value;
 
-    // Wild Card color selection simulation
-    if (card.color === 'Wild') {
-      // Set to a random color
-      const randomColor = ['Red', 'Green', 'Blue', 'Yellow'][Math.floor(Math.random() * 4)];
-      card.color = randomColor;
+    if (!isValid) {
+      socket.emit('chat-message', { name: 'System', message: 'Invalid card! Must match color or value or be Wild.' });
+      return;
     }
 
+    // Remove the card from hand
+    const index = player.hand.findIndex(c => c.color === card.color && c.value === card.value);
+    if (index === -1) return; // Not found in hand
+    player.hand.splice(index, 1);
+
+    // Save for +4 challenge (not implemented, but correct for future)
+    room.previousTopCardColor = top.color;
+
+    // Handle Wild card color selection
+    let playedCard = { ...card };
+    if (card.color === 'Wild') {
+      // In official UNO, player must choose a color (front-end: send chosenColor)
+      if (!card.chosenColor) {
+        // fallback: assign random color
+        playedCard.color = ['Red', 'Green', 'Blue', 'Yellow'][Math.floor(Math.random() * 4)];
+      } else {
+        playedCard.color = card.chosenColor;
+      }
+    }
+
+    room.topCard = playedCard;
+
+    // --- Card effect ---
+    let skipNext = false;
+
     if (card.value === 'Reverse') {
-      room.direction *= -1;
-    } else if (card.value === 'Skip') {
+      if (room.players.length === 2) {
+        // 2 player: Reverse acts as Skip
+        skipNext = true;
+      } else {
+        room.direction *= -1;
+      }
+    }
+
+    if (card.value === 'Skip' || skipNext) {
       room.turnIndex = nextTurnIndex(room, 2);
     } else if (card.value === '+2') {
       const target = getPlayerAtOffset(room, 1);
@@ -200,19 +221,81 @@ io.on('connection', (socket) => {
       room.turnIndex = nextTurnIndex(room, 1);
     }
 
-    io.in(currentRoom).emit('updateTopCard', card);
+    io.in(currentRoom).emit('updateTopCard', playedCard);
     socket.emit('updateHand', player.hand);
 
+    // --- TMR Call (UNO call) ---
+    if (player.hand.length === 1) {
+      player.calledTMR = false;
+      io.in(currentRoom).emit('tmr-alert', { name: player.name }); // Frontend: show TMR button
+    }
+
+    // --- Win check ---
     if (player.hand.length === 0) {
       io.in(currentRoom).emit('gameOver', { winner: player.name });
       return;
     }
 
+    // Next turn announce
     room.players.forEach((p, i) => {
       io.to(p.id).emit('yourTurn', i === room.turnIndex);
     });
 
     sendUpdate(currentRoom);
+  });
+
+  // Draw card: If playable, player may play it immediately (classic rule: must play if possible)
+  socket.on('drawCard', () => {
+    const room = rooms[currentRoom];
+    const player = room?.players.find(p => p.name === playerName);
+    if (!player) return;
+
+    if (room.players[room.turnIndex]?.name !== playerName) return; // Only current player can draw
+
+    const card = drawCards(1)[0];
+    player.hand.push(card);
+    socket.emit('updateHand', player.hand);
+
+    // Check if the drawn card is playable
+    const top = room.topCard;
+    const canPlay =
+      card.color === 'Wild' ||
+      card.color === top.color ||
+      card.value === top.value;
+
+    if (canPlay) {
+      // Frontend: prompt to play the drawn card or keep (must play if possible in official rules)
+      socket.emit('canPlayDrawnCard', card);
+    } else {
+      // Turn passes
+      room.turnIndex = nextTurnIndex(room, 1);
+      room.players.forEach((p, i) => {
+        io.to(p.id).emit('yourTurn', i === room.turnIndex);
+      });
+      sendUpdate(currentRoom);
+    }
+  });
+
+  // --- TMR Call (UNO call) ---
+  socket.on('callTMR', () => {
+    const room = rooms[currentRoom];
+    const player = room?.players.find(p => p.name === playerName);
+    if (player && player.hand.length === 1) {
+      player.calledTMR = true;
+      io.in(currentRoom).emit('chat-message', { name: 'System', message: `${player.name} called TMR!` });
+    }
+  });
+
+  // --- Catch TMR (UNO) ---
+  socket.on('catchTMR', (offenderName) => {
+    const room = rooms[currentRoom];
+    const offender = room?.players.find(p => p.name === offenderName);
+    if (offender && offender.hand.length === 1 && !offender.calledTMR) {
+      offender.hand.push(...drawCards(2)); // Penalty
+      io.in(currentRoom).emit('chat-message', { name: 'System', message: `${offender.name} did not call TMR! +2 penalty.` });
+      offender.calledTMR = true;
+      sendUpdate(currentRoom);
+    }
   });
 
   socket.on('disconnect', () => {
@@ -221,15 +304,12 @@ io.on('connection', (socket) => {
       const player = room?.players.find(p => p.name === playerName);
       if (player) {
         player.connected = false;
-        // Only start timer if not already started
         if (!disconnectTimers[socket.id]) {
           disconnectTimers[socket.id] = setTimeout(() => {
-            // Remove player if not reconnected in 45 seconds
             const idx = room.players.findIndex(p => p.name === playerName);
             if (idx !== -1 && room.players[idx].connected === false) {
               room.players.splice(idx, 1);
               sendUpdate(currentRoom);
-              // If no players left, delete room
               if (room.players.length === 0) {
                 delete rooms[currentRoom];
               }
@@ -251,7 +331,6 @@ io.on('connection', (socket) => {
     return room.players[idx];
   }
 
-  // --- main change: sendUpdate now includes readyCounts for game.html
   function sendUpdate(code) {
     const room = rooms[code];
     if (!room) return;
