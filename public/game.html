@@ -67,6 +67,13 @@
       background-color: #222;
     }
 
+    #readyStatus {
+      font-size: 16px;
+      margin-bottom: 8px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
     #yourHand {
       display: flex;
       gap: 8px;
@@ -80,6 +87,21 @@
       border-radius: 6px;
       background-color: #444;
       cursor: pointer;
+      min-width: 36px;
+      min-height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 15px;
+      border: 2px solid #222;
+      transition: transform 0.1s;
+    }
+    .your-card:hover {
+      transform: translateY(-5px) scale(1.1);
+      border: 2px solid yellow;
+      z-index: 2;
     }
 
     #drawBtn, #readyBtn {
@@ -93,6 +115,12 @@
       cursor: pointer;
     }
 
+    #drawBtn[disabled] {
+      background: #ccc;
+      color: #888;
+      cursor: not-allowed;
+    }
+
     #titleBanner {
       font-size: 28px;
       font-weight: bold;
@@ -102,6 +130,7 @@
 </head>
 <body>
   <div id="titleBanner">tmrflip</div>
+  <div id="readyStatus">Ready: 0/0</div>
 
   <button id="readyBtn" onclick="sendReady()">I'm Ready</button>
   <div id="topCard">Top Card: -</div>
@@ -189,7 +218,11 @@
       document.getElementById('drawBtn').disabled = !yes;
     });
 
-    socket.on('updatePlayers', ({ players, handCounts, currentPlayer }) => {
+    // NEW: Show ready count
+    socket.on('updatePlayers', ({ players, handCounts, currentPlayer, readyCounts }) => {
+      if (readyCounts && typeof readyCounts.ready !== "undefined" && typeof readyCounts.total !== "undefined") {
+        document.getElementById('readyStatus').textContent = `Ready: ${readyCounts.ready}/${readyCounts.total}`;
+      }
       renderPlayers(players, handCounts, currentPlayer);
     });
 
