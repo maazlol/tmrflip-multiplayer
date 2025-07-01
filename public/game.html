@@ -44,7 +44,18 @@
       border-radius: 12px;
       cursor: pointer;
       box-shadow: 2px 6px 16px #0002;
+      transition: box-shadow 0.25s;
     }
+    #deck-pile .pile-card.deck-anim {
+      animation: deckDrawAnim 0.6s cubic-bezier(.5,1.6,.4,1) forwards;
+      z-index: 100;
+    }
+    @keyframes deckDrawAnim {
+      0% { box-shadow: 0 0 0 0 #ffe24ac0; }
+      70% { box-shadow: 0 0 32px 12px #ffe24a90; }
+      100% { box-shadow: 0 0 0 0 #ffe24a00; }
+    }
+
     #discard-pile .pile-card {
       width: 90px; height: 140px;
       background: #222;
@@ -53,7 +64,17 @@
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 8px;
       border-radius: 12px;
+      transition: box-shadow 0.23s;
     }
+    #discard-pile .pile-card.discard-anim {
+      animation: discardPilePop 0.45s cubic-bezier(.4,2.1,.4,1) forwards;
+    }
+    @keyframes discardPilePop {
+      0% { box-shadow: 0 0 0 0 #f51; transform: scale(1);}
+      60% { box-shadow: 0 0 24px 10px #f51d; transform: scale(1.17);}
+      100% { box-shadow: 0 0 0 0 #f51; transform: scale(1);}
+    }
+
     .card-back, .opponent-card-behind {
       min-width: 34px; min-height: 48px;
       width: 38px; height: 56px;
@@ -115,14 +136,32 @@
       justify-content: center;
       cursor: pointer;
       box-shadow: 1px 2px 6px #000a;
-      transition: transform 0.1s;
+      transition: transform 0.11s;
       position: relative;
     }
     .your-card:hover {
-      transform: translateY(-8px) scale(1.12);
+      transform: translateY(-8px) scale(1.13) rotate(-2deg);
       border: 2px solid yellow;
       z-index: 2;
       background: #666;
+    }
+    .play-card-anim {
+      animation: playCardMove 0.5s cubic-bezier(.2,1.2,.6,1.0);
+      z-index: 100;
+    }
+    @keyframes playCardMove {
+      0% { transform: scale(1) translateY(0); opacity: 1; }
+      60% { transform: scale(1.15) translateY(-30px); opacity: 1; }
+      100% { transform: scale(0.7) translateY(-80px); opacity: 0; }
+    }
+    .draw-card-anim {
+      animation: drawCardMove 0.5s cubic-bezier(.2,1.2,.6,1.0);
+      z-index: 100;
+    }
+    @keyframes drawCardMove {
+      0% { transform: scale(0.7) translateY(-80px); opacity: 0; }
+      60% { transform: scale(1.15) translateY(-30px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
     }
     .my-turn-glow {
       box-shadow: 0 0 8px 2px yellow;
@@ -224,6 +263,13 @@
       background: transparent;
       color: #fff;
     }
+    .chat-msg-anim {
+      animation: chatMsgFadeIn 0.4s;
+    }
+    @keyframes chatMsgFadeIn {
+      from { opacity: 0; transform: translateY(15px);}
+      to { opacity: 1; transform: none;}
+    }
     #chat-input {
       width: 76%;
       margin: 5px;
@@ -272,6 +318,56 @@
       font-family: 'Comic Sans MS', cursive, sans-serif;
       user-select: none;
     }
+    /* WIN ANIMATION */
+    #confetti-canvas {
+      pointer-events: none;
+      position: fixed;
+      left: 0; top: 0;
+      width: 100vw; height: 100vh;
+      z-index: 2000;
+      display: none;
+    }
+    .winner-anim {
+      animation: winnerBounce 1.1s cubic-bezier(.3,2.5,.4,1.2) 1;
+      color: #ffe24a;
+      font-size: 2em;
+      text-shadow: 0 3px 32px #ffe24a, 0 1px 8px #fff;
+      letter-spacing: 3px;
+    }
+    @keyframes winnerBounce {
+      0% { transform: scale(0.6);}
+      60% { transform: scale(1.23);}
+      100% { transform: scale(1);}
+    }
+    /* --- Special Card Styles and Animations --- */
+    .special-card {
+      background: linear-gradient(140deg, #1a1a1a 70%, #fffbe4 120%) !important;
+      color: #f51 !important;
+      position: relative;
+      font-size: 1.12em;
+      border: 2.5px solid #ffe24a !important;
+      box-shadow: 0 4px 18px #ffe24a44, 0 1px 6px #0005;
+    }
+    .special-card .icon {
+      font-size: 1.4em;
+      display: block;
+      margin-bottom: 2px;
+      line-height: 1.1em;
+    }
+    @keyframes bombShake { 0%{transform:rotate(0);}20%{transform:rotate(-8deg);}40%{transform:rotate(8deg);}60%{transform:rotate(-6deg);}80%{transform:rotate(6deg);}100%{transform:rotate(0);} }
+    .bomb-anim { animation: bombShake 0.5s; }
+    @keyframes handGlow { 0%{box-shadow:0 0 0 0 #ffe24a;}50%{box-shadow:0 0 40px 12px #ffe24a;}100%{box-shadow:0 0 0 0 #ffe24a;} }
+    .swap-anim { animation: handGlow 0.7s; }
+    @keyframes peekAnim { 0%{opacity:1;}50%{opacity:0.3;}100%{opacity:1;} }
+    .peek-anim { animation: peekAnim 1s; }
+    @keyframes stealAnim { 0%{transform:translateX(0);}50%{transform:translateX(-20px);}100%{transform:translateX(0);} }
+    .steal-anim { animation: stealAnim 0.7s; }
+    @keyframes skipAllAnim { 0%{opacity:1;}50%{opacity:0.1;}100%{opacity:1;} }
+    .skipall-anim { animation: skipAllAnim 0.8s; }
+    @keyframes lockGlow { 0%{box-shadow:0 0 0 0 #00f4;}50%{box-shadow:0 0 32px 6px #00f4;}100%{box-shadow:0 0 0 0 #00f4;} }
+    .colorlock-anim { animation: lockGlow 1s; }
+    @keyframes reverseSpin { 0%{transform:rotate(0);}100%{transform:rotate(360deg);} }
+    .reverseattack-anim { animation: reverseSpin 0.7s; }
     @media (max-width: 700px) {
       #chat-popup, #chat-minimized { width: 98vw; right: 1vw;}
       #readyBtn, #readyStatus { right: 10vw;}
@@ -308,6 +404,7 @@
   <div id="chat-minimized" style="display:none;">
     <div class="chat-min-header">Chat</div>
   </div>
+  <canvas id="confetti-canvas"></canvas>
   <script>
     const socket = io();
     const urlParams = new URLSearchParams(window.location.search);
@@ -319,6 +416,7 @@
     let currentPlayer = "";
     let myIndex = 0;
     let isReady = false; // Track ready state
+    let lastHandLength = 0;
 
     if (!code || !myName) {
       alert("Missing name or room code.");
@@ -344,33 +442,61 @@
       if (players.length > 2) {
         const leftDiv = document.getElementById('left-player');
         leftDiv.innerHTML = `
-          <div class="opponent-cards">${
+          <div class="opponent-cards" id="left-cards">${
             Array.from({length: counts[leftIdx]}).map(()=>'<div class="opponent-card-behind"></div>').join('')
           }</div>
-          <div class="opponent-name">${players[leftIdx]}</div>
+          <div class="opponent-name" id="left-name">${players[leftIdx]}</div>
         `;
       }
       const rightDiv = document.getElementById('right-player');
       rightDiv.innerHTML = `
-        <div class="opponent-cards">${
+        <div class="opponent-cards" id="right-cards">${
           Array.from({length: counts[rightIdx]}).map(()=>'<div class="opponent-card-behind"></div>').join('')
         }</div>
-        <div class="opponent-name">${players[rightIdx]}</div>
+        <div class="opponent-name" id="right-name">${players[rightIdx]}</div>
       `;
     }
+
     function renderHand(hand) {
       const handDiv = document.getElementById('my-hand');
+      // Card draw animation
+      if (hand.length > lastHandLength) {
+        setTimeout(() => {
+          const els = handDiv.querySelectorAll('.your-card');
+          if (els.length) {
+            els[els.length-1].classList.add('draw-card-anim');
+            setTimeout(() => els[els.length-1].classList.remove('draw-card-anim'), 600);
+          }
+        }, 0);
+      }
+      lastHandLength = hand.length;
       handDiv.innerHTML = '';
       hand.forEach(card => {
         const el = document.createElement('div');
         el.className = 'your-card';
-        if (card.color === 'Wild') {
+        // Special Card Rendering
+        if(card.type === 'Special') {
+          let icon = "", text = "";
+          switch(card.special) {
+            case "bomb": icon = "💣"; text = "Bomb"; break;
+            case "swap": icon = "🔄"; text = "Swap"; break;
+            case "peek": icon = "👀"; text = "Peek"; break;
+            case "steal": icon = "🕵️‍♂️"; text = "Steal"; break;
+            case "skipall": icon = "⏭️"; text = "Skip All"; break;
+            case "colorlock": icon = "🔒"; text = "Color Lock"; break;
+            case "reverseattack": icon = "🔄+2"; text = "Reverse+"; break;
+          }
+          el.classList.add('special-card');
+          el.innerHTML = `<span class="icon">${icon}</span><span>${text}</span>`;
+        }
+        else if (card.color === 'Wild') {
           el.style.background = 'linear-gradient(135deg,#444,#fff)';
           el.style.color = '#000';
+          el.textContent = card.value;
         } else if(card.color) {
           el.style.backgroundColor = card.color ? card.color.toLowerCase() : '#444';
+          el.textContent = card.value + (card.color && card.color !== 'Wild' ? ' ' + card.color[0] : '');
         }
-        el.textContent = card.value + (card.color && card.color !== 'Wild' ? ' ' + card.color[0] : '');
         if (isReady) {
           el.onclick = () => playCard(card);
         }
@@ -382,6 +508,7 @@
         handDiv.classList.remove('disabled-hand');
       }
     }
+
     function renderDiscard(card) {
       const discard = document.getElementById('discard-card');
       if (!card) {
@@ -389,23 +516,84 @@
         discard.style.background = '#222';
         return;
       }
-      discard.textContent = `${card.value}${card.color && card.color !== "Wild" ? " " + card.color[0] : card.color === "Wild" ? " 🃏" : ""}`;
-      discard.style.background = (card.color && card.color !== 'Wild') ? card.color.toLowerCase() : '#333';
-      discard.style.color = (card.color === 'Yellow') ? '#444' : '#fff';
+      if(card.type === 'Special') {
+        let icon = "";
+        switch(card.special) {
+          case "bomb": icon = "💣"; break;
+          case "swap": icon = "🔄"; break;
+          case "peek": icon = "👀"; break;
+          case "steal": icon = "🕵️‍♂️"; break;
+          case "skipall": icon = "⏭️"; break;
+          case "colorlock": icon = "🔒"; break;
+          case "reverseattack": icon = "🔄+2"; break;
+        }
+        discard.innerHTML = `<span style="font-size:2em">${icon}</span>`;
+        discard.style.background = "#1a1a1a";
+        discard.style.color = "#ffe24a";
+      } else {
+        discard.textContent = `${card.value}${card.color && card.color !== "Wild" ? " " + card.color[0] : card.color === "Wild" ? " 🃏" : ""}`;
+        discard.style.background = (card.color && card.color !== 'Wild') ? card.color.toLowerCase() : '#333';
+        discard.style.color = (card.color === 'Yellow') ? '#444' : '#fff';
+      }
+      // Discard pile animation
+      discard.classList.remove('discard-anim');
+      void discard.offsetWidth; // force reflow
+      discard.classList.add('discard-anim');
     }
 
     function drawCard() {
+      // Deck pile animation
+      const deck = document.getElementById('deck-card');
+      deck.classList.remove('deck-anim');
+      void deck.offsetWidth;
+      deck.classList.add('deck-anim');
+      setTimeout(() => deck.classList.remove('deck-anim'), 650);
       if (isReady) socket.emit("drawCard");
     }
+
     function playCard(card) {
       if (!isReady) return;
-      if (card.color === 'Wild') {
+      if (card.type === "Special") {
+        // For colorlock, prompt for color selection
+        if(card.special === "colorlock") {
+          const chosenColor = prompt('Choose color to lock: Red, Green, Blue, Yellow');
+          if (!chosenColor || !['red','green','blue','yellow'].includes(chosenColor.toLowerCase())) return;
+          card.chosenColor = chosenColor.charAt(0).toUpperCase() + chosenColor.slice(1).toLowerCase();
+        }
+      }
+      else if (card.color === 'Wild') {
         const chosenColor = prompt('Choose color: Red, Green, Blue, Yellow');
         if (!chosenColor || !['red','green','blue','yellow'].includes(chosenColor.toLowerCase())) return;
         card.chosenColor = chosenColor.charAt(0).toUpperCase() + chosenColor.slice(1).toLowerCase();
       }
-      socket.emit("playCard", card);
+      const handDiv = document.getElementById('my-hand');
+      const cardEls = [...handDiv.children];
+      // Special card play animation
+      if (card.type === "Special") {
+        const expectedTxt = card.special;
+        const el = cardEls.find(e => e.textContent.toLowerCase().includes(expectedTxt));
+        if (el) {
+          el.classList.add('play-card-anim');
+          setTimeout(() => {
+            socket.emit("playCard", card);
+          }, 350);
+        } else {
+          socket.emit("playCard", card);
+        }
+      } else {
+        const expectedTxt = card.value + (card.color && card.color !== 'Wild' ? ' ' + card.color[0] : '');
+        const el = cardEls.find(e => e.textContent === expectedTxt);
+        if (el) {
+          el.classList.add('play-card-anim');
+          setTimeout(() => {
+            socket.emit("playCard", card);
+          }, 350);
+        } else {
+          socket.emit("playCard", card);
+        }
+      }
     }
+
     function sendReady() {
       isReady = true;
       socket.emit("playerReady");
@@ -440,6 +628,7 @@
     socket.on('chat-message', ({ name, message }) => {
       const div = document.createElement('div');
       div.innerHTML = `<b>${name}:</b> ${emojify(message)}`;
+      div.classList.add('chat-msg-anim');
       chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     });
@@ -469,7 +658,6 @@
     });
 
     socket.on('updateHand', (hand) => {
-      myHand = hand;
       renderHand(hand);
     });
 
@@ -498,14 +686,184 @@
       }
     });
 
+    // --- Special Card Animation Events ---
+    socket.on("special-anim", ({ type, target, color }) => {
+      switch(type) {
+        case "bomb":
+          bombAnim(target);
+          break;
+        case "swap":
+          swapAnim(target);
+          break;
+        case "peek":
+          peekAnim(target);
+          break;
+        case "steal":
+          stealAnim(target);
+          break;
+        case "skipall":
+          skipAllAnim();
+          break;
+        case "colorlock":
+          colorLockAnim(color);
+          break;
+        case "reverseattack":
+          reverseAttackAnim(target);
+          break;
+      }
+    });
+
+    function bombAnim(targetName) {
+      // If target is me
+      if (targetName === myName) {
+        document.getElementById('my-hand').classList.add('bomb-anim');
+        setTimeout(() => document.getElementById('my-hand').classList.remove('bomb-anim'), 600);
+      } else {
+        // left/right
+        if (document.getElementById('left-name') && document.getElementById('left-name').innerText === targetName)
+          document.getElementById('left-cards').classList.add('bomb-anim');
+        if (document.getElementById('right-name') && document.getElementById('right-name').innerText === targetName)
+          document.getElementById('right-cards').classList.add('bomb-anim');
+        setTimeout(() => {
+          if (document.getElementById('left-cards')) document.getElementById('left-cards').classList.remove('bomb-anim');
+          if (document.getElementById('right-cards')) document.getElementById('right-cards').classList.remove('bomb-anim');
+        }, 600);
+      }
+    }
+    function swapAnim(targetName) {
+      if (targetName === myName) {
+        document.getElementById('my-hand').classList.add('swap-anim');
+        setTimeout(() => document.getElementById('my-hand').classList.remove('swap-anim'), 800);
+      } else {
+        if (document.getElementById('left-name') && document.getElementById('left-name').innerText === targetName)
+          document.getElementById('left-cards').classList.add('swap-anim');
+        if (document.getElementById('right-name') && document.getElementById('right-name').innerText === targetName)
+          document.getElementById('right-cards').classList.add('swap-anim');
+        setTimeout(() => {
+          if (document.getElementById('left-cards')) document.getElementById('left-cards').classList.remove('swap-anim');
+          if (document.getElementById('right-cards')) document.getElementById('right-cards').classList.remove('swap-anim');
+        }, 800);
+      }
+    }
+    function peekAnim(targetName) {
+      if (targetName === myName) {
+        document.getElementById('my-hand').classList.add('peek-anim');
+        setTimeout(() => document.getElementById('my-hand').classList.remove('peek-anim'), 1000);
+      } else {
+        if (document.getElementById('left-name') && document.getElementById('left-name').innerText === targetName)
+          document.getElementById('left-cards').classList.add('peek-anim');
+        if (document.getElementById('right-name') && document.getElementById('right-name').innerText === targetName)
+          document.getElementById('right-cards').classList.add('peek-anim');
+        setTimeout(() => {
+          if (document.getElementById('left-cards')) document.getElementById('left-cards').classList.remove('peek-anim');
+          if (document.getElementById('right-cards')) document.getElementById('right-cards').classList.remove('peek-anim');
+        }, 1000);
+      }
+    }
+    function stealAnim(targetName) {
+      if (targetName === myName) {
+        document.getElementById('my-hand').classList.add('steal-anim');
+        setTimeout(() => document.getElementById('my-hand').classList.remove('steal-anim'), 700);
+      } else {
+        if (document.getElementById('left-name') && document.getElementById('left-name').innerText === targetName)
+          document.getElementById('left-cards').classList.add('steal-anim');
+        if (document.getElementById('right-name') && document.getElementById('right-name').innerText === targetName)
+          document.getElementById('right-cards').classList.add('steal-anim');
+        setTimeout(() => {
+          if (document.getElementById('left-cards')) document.getElementById('left-cards').classList.remove('steal-anim');
+          if (document.getElementById('right-cards')) document.getElementById('right-cards').classList.remove('steal-anim');
+        }, 700);
+      }
+    }
+    function skipAllAnim() {
+      document.getElementById('my-hand').classList.add('skipall-anim');
+      setTimeout(() => document.getElementById('my-hand').classList.remove('skipall-anim'), 850);
+      if (document.getElementById('left-cards')) {
+        document.getElementById('left-cards').classList.add('skipall-anim');
+        setTimeout(() => document.getElementById('left-cards').classList.remove('skipall-anim'), 850);
+      }
+      if (document.getElementById('right-cards')) {
+        document.getElementById('right-cards').classList.add('skipall-anim');
+        setTimeout(() => document.getElementById('right-cards').classList.remove('skipall-anim'), 850);
+      }
+    }
+    function colorLockAnim(color) {
+      document.getElementById('discard-card').classList.add('colorlock-anim');
+      setTimeout(() => document.getElementById('discard-card').classList.remove('colorlock-anim'), 1000);
+    }
+    function reverseAttackAnim(targetName) {
+      document.getElementById('discard-card').classList.add('reverseattack-anim');
+      setTimeout(() => document.getElementById('discard-card').classList.remove('reverseattack-anim'), 700);
+      if (targetName === myName) {
+        document.getElementById('my-hand').classList.add('draw-card-anim');
+        setTimeout(() => document.getElementById('my-hand').classList.remove('draw-card-anim'), 700);
+      }
+    }
+
+    // --- Win Animation ---
+    function confettiBurst() {
+      // Simple confetti burst using canvas
+      const canvas = document.getElementById('confetti-canvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      canvas.style.display = 'block';
+      const ctx = canvas.getContext('2d');
+      const particles = [];
+      const colors = ["#ffe24a","#f51","#3af","#6f0","#fff","#ff8c00"];
+      for(let i=0; i<120; ++i){
+        particles.push({
+          x: canvas.width/2, y: canvas.height/2,
+          r: 5+Math.random()*6,
+          color: colors[Math.floor(Math.random()*colors.length)],
+          vx: (Math.random()-0.5)*12,
+          vy: -Math.random()*11-5,
+          ay: 0.25 + Math.random()*0.14
+        });
+      }
+      let tick=0;
+      function draw() {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        for (let p of particles) {
+          ctx.beginPath();
+          ctx.arc(p.x,p.y,p.r,0,2*Math.PI);
+          ctx.fillStyle=p.color;
+          ctx.fill();
+          p.x+=p.vx; p.y+=p.vy;
+          p.vy+=p.ay;
+        }
+        if (++tick<80) requestAnimationFrame(draw);
+        else setTimeout(()=>canvas.style.display='none',300);
+      }
+      draw();
+    }
+
     socket.on('gameOver', ({ winner }) => {
-      alert(`${winner} has won the game!`);
+      // Winner animation
+      confettiBurst();
+      setTimeout(()=>{
+        const msg = document.createElement('div');
+        msg.textContent = `${winner} has won the game!`;
+        msg.className = 'winner-anim';
+        msg.style.position = 'fixed';
+        msg.style.top = '42%';
+        msg.style.left = '50%';
+        msg.style.transform = 'translate(-50%,-50%)';
+        msg.style.zIndex = '2002';
+        document.body.appendChild(msg);
+        setTimeout(()=>msg.remove(), 3200);
+      }, 650);
     });
 
     window.onload = () => {
       document.getElementById('draw-btn').disabled = true;
       document.getElementById('my-hand').classList.add('disabled-hand');
       isReady = false;
+      // Responsive confetti
+      window.addEventListener('resize', ()=>{
+        const canvas = document.getElementById('confetti-canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      });
     };
   </script>
 </body>
