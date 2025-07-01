@@ -34,7 +34,6 @@
       align-items: center;
       margin: 0 40px;
     }
-    /* --- Bear on cards back only, using direct image link --- */
     #deck-pile .pile-card {
       width: 90px; height: 140px;
       background: url('https://media.discordapp.net/attachments/1018571001992323082/1389152983593386044/bear.png?ex=68639508&is=68624388&hm=8de1d33acb680fb1f5205cf14e169f790a40004ab4823cf88fcd70ac70b8fdc6&=&format=webp&quality=lossless&width=1164&height=823') center/cover no-repeat, #333;
@@ -55,7 +54,6 @@
       margin-bottom: 8px;
       border-radius: 12px;
     }
-    /* --- Card backs for others --- */
     .card-back, .opponent-card-behind {
       min-width: 34px; min-height: 48px;
       width: 38px; height: 56px;
@@ -130,7 +128,58 @@
       box-shadow: 0 0 8px 2px yellow;
       border-color: yellow !important;
     }
-    /* Chat box Facebook mini style */
+    .disabled-hand .your-card {
+      pointer-events: none !important;
+      filter: grayscale(0.7) brightness(0.8);
+      opacity: 0.7;
+      border-color: #aaa !important;
+      transition: none !important;
+      cursor: not-allowed !important;
+    }
+    .disabled-hand .your-card:hover {
+      transform: none !important;
+      border-color: #aaa !important;
+      background: #666 !important;
+    }
+    #readyBtn {
+      position: absolute;
+      top: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      background: #ffe24a;
+      color: #222;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 34px;
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 101;
+      transition: background 0.15s;
+      box-shadow: 0 1px 16px #ffe24a88;
+      border: 2px solid #ffe24a;
+    }
+    #readyBtn:hover {
+      background: #fff;
+      color: #111;
+    }
+    #readyStatus {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.13em;
+      z-index: 101;
+      color: #ffe24a;
+      font-weight: bold;
+      background: #fffbe4;
+      padding: 2.5px 15px;
+      border-radius: 8px;
+      box-shadow: 0 1px 8px #ffe24a33;
+      border: 1.4px solid #ffe24a;
+    }
+    /* --- CHAT CHANGES START --- */
     #chat-popup {
       position: fixed;
       right: 24px; bottom: 24px;
@@ -142,7 +191,7 @@
       display: flex;
       flex-direction: column;
       transition: all 0.15s;
-      border: 2px dashed #ffe24a;
+      border: 2px dashed #fff;
     }
     #chat-header {
       background: rgba(36,36,36,0.7);
@@ -153,7 +202,7 @@
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
-      border-bottom: 2px dashed #ffe24a;
+      border-bottom: 2px dashed #fff;
     }
     #chat-messages {
       height: 180px;
@@ -175,7 +224,7 @@
     }
     #chat-send {
       width: 20%;
-      background: #ffe24a;
+      background: #fff;
       color: #222;
       border-radius: 6px;
       border: none;
@@ -189,63 +238,34 @@
       display: none;
       position: fixed;
       right: 24px; bottom: 24px;
-      background: rgba(25,25,25,0.7);
-      color: #ffe24a;
-      border-radius: 11px 11px 0 0;
-      border: 2px dashed #ffe24a;
-      padding: 10px 32px;
-      font-size: 1.13em;
+      border: 2px dashed #fff;
+      border-radius: 12px 12px 0 0;
       box-shadow: 0 0 8px #000a;
-      cursor: pointer;
+      background: rgba(25,25,25,0.88);
       z-index: 101;
+      cursor: pointer;
+      width: 180px;
+      transition: all 0.15s;
+    }
+    .chat-min-header {
       font-weight: bold;
       letter-spacing: 1px;
       text-align: center;
+      font-size: 1.11em;
+      color: #fff;
+      padding: 9px 0 8px 0;
+      border-radius: 12px 12px 0 0;
+      background: rgba(36,36,36,0.85);
+      border-bottom: 2px dashed #fff;
       font-family: 'Comic Sans MS', cursive, sans-serif;
-    }
-    #readyBtn {
-      position: absolute;
-      top: 35px;
-      right: 40px;
-      font-size: 16px;
-      background: #ffe24a;
-      color: #222;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 26px;
-      font-family: inherit;
-      font-weight: bold;
-      cursor: pointer;
-      z-index: 101;
-      transition: background 0.15s;
-      box-shadow: 0 1px 8px #ffe24a44;
-      border: 2px solid #ffe24a;
-    }
-    #readyBtn:hover {
-      background: #fff;
-      color: #111;
-    }
-    #readyStatus {
-      position: absolute;
-      top: 77px;
-      right: 47px;
-      font-size: 1.08em;
-      letter-spacing: 1px;
-      z-index: 101;
-      color: #ffe24a;
-      font-weight: bold;
-      background: #fffbe4;
-      padding: 2px 10px;
-      border-radius: 4px;
-      box-shadow: 0 1px 8px #ffe24a33;
-      border: 1.4px solid #ffe24a;
     }
     @media (max-width: 700px) {
       #left-player, #right-player { display: none; }
-      #chat-popup, #chat-minimized { width: 98vw; right: 1vw; }
+      #chat-popup, #chat-minimized { width: 98vw; right: 1vw;}
       #readyBtn, #readyStatus { right: 10vw;}
       #my-hand { max-width: 98vw; }
     }
+    /* --- CHAT CHANGES END --- */
   </style>
 </head>
 <body>
@@ -275,7 +295,9 @@
     <input id="chat-input" type="text" placeholder="Type..." autocomplete="off" />
     <button id="chat-send">Send</button>
   </div>
-  <div id="chat-minimized">Chat</div>
+  <div id="chat-minimized">
+    <div class="chat-min-header">Chat</div>
+  </div>
   <script>
     const socket = io();
     const urlParams = new URLSearchParams(window.location.search);
@@ -286,6 +308,7 @@
     let myHand = [];
     let currentPlayer = "";
     let myIndex = 0;
+    let isReady = false; // Track ready state
 
     if (!code || !myName) {
       alert("Missing name or room code.");
@@ -302,14 +325,12 @@
       return counts.slice(idx).concat(counts.slice(0, idx));
     }
 
-    // --- Rendering functions ---
     function renderOpponents(players, counts) {
       document.getElementById('left-player').innerHTML = '';
       document.getElementById('right-player').innerHTML = '';
       if (players.length < 2) return;
       const leftIdx = (players.length - 1);
       const rightIdx = 1 % players.length;
-      // Left
       if (players.length > 2) {
         const leftDiv = document.getElementById('left-player');
         leftDiv.innerHTML = `
@@ -319,7 +340,6 @@
           <div class="opponent-name">${players[leftIdx]}</div>
         `;
       }
-      // Right
       const rightDiv = document.getElementById('right-player');
       rightDiv.innerHTML = `
         <div class="opponent-cards">${
@@ -341,9 +361,16 @@
           el.style.backgroundColor = card.color ? card.color.toLowerCase() : '#444';
         }
         el.textContent = card.value + (card.color && card.color !== 'Wild' ? ' ' + card.color[0] : '');
-        el.onclick = () => playCard(card);
+        if (isReady) {
+          el.onclick = () => playCard(card);
+        }
         handDiv.appendChild(el);
       });
+      if (!isReady) {
+        handDiv.classList.add('disabled-hand');
+      } else {
+        handDiv.classList.remove('disabled-hand');
+      }
     }
     function renderDiscard(card) {
       const discard = document.getElementById('discard-card');
@@ -357,11 +384,11 @@
       discard.style.color = (card.color === 'Yellow') ? '#444' : '#fff';
     }
 
-    // --- Events and Actions ---
     function drawCard() {
-      socket.emit("drawCard");
+      if (isReady) socket.emit("drawCard");
     }
     function playCard(card) {
+      if (!isReady) return;
       if (card.color === 'Wild') {
         const chosenColor = prompt('Choose color: Red, Green, Blue, Yellow');
         if (!chosenColor || !['red','green','blue','yellow'].includes(chosenColor.toLowerCase())) return;
@@ -370,7 +397,10 @@
       socket.emit("playCard", card);
     }
     function sendReady() {
+      isReady = true;
       socket.emit("playerReady");
+      document.getElementById('my-hand').classList.remove('disabled-hand');
+      document.getElementById('readyBtn').disabled = true;
     }
 
     // --- Chat logic ---
@@ -404,7 +434,6 @@
       document.getElementById('chat-minimized').style.display = 'none';
     };
 
-    // --- Socket.io handlers ---
     socket.emit("joinGame", myName);
 
     socket.on('joinFailed', (msg) => alert(msg));
@@ -425,8 +454,8 @@
     });
 
     socket.on('yourTurn', (yes) => {
-      document.getElementById('draw-btn').disabled = !yes;
-      document.getElementById('my-hand').classList.toggle('my-turn-glow', yes);
+      document.getElementById('draw-btn').disabled = !yes || !isReady;
+      document.getElementById('my-hand').classList.toggle('my-turn-glow', yes && isReady);
     });
 
     socket.on('updatePlayers', ({ players, handCounts: counts, currentPlayer, readyCounts }) => {
@@ -455,6 +484,8 @@
 
     window.onload = () => {
       document.getElementById('draw-btn').disabled = true;
+      document.getElementById('my-hand').classList.add('disabled-hand');
+      isReady = false;
     };
   </script>
 </body>
