@@ -9,7 +9,7 @@
     body {
       margin: 0;
       font-family: 'Comic Sans MS', sans-serif;
-      background: #000; /* Black background */
+      background: #000;
       color: #fff;
       overflow: hidden;
     }
@@ -179,7 +179,7 @@
       box-shadow: 0 1px 8px #ffe24a33;
       border: 1.4px solid #ffe24a;
     }
-    /* --- CHAT CHANGES START --- */
+    /* --- CHAT --- */
     #chat-popup {
       position: fixed;
       right: 24px; bottom: 24px;
@@ -191,7 +191,7 @@
       display: flex;
       flex-direction: column;
       transition: all 0.15s;
-      border: 2px dashed #fff;
+      border: 2px solid #fff;
     }
     #chat-header {
       background: rgba(36,36,36,0.7);
@@ -199,10 +199,22 @@
       border-radius: 12px 12px 0 0;
       font-weight: bold;
       display: flex;
-      justify-content: space-between;
+      justify-content: center;
       align-items: center;
       cursor: pointer;
-      border-bottom: 2px dashed #fff;
+      border-bottom: 3px dotted #fff; /* dotted white line */
+      user-select: none;
+      transition: background 0.18s;
+    }
+    #chat-header span {
+      width: 100%;
+      text-align: center;
+      pointer-events: none;
+      letter-spacing: 0.5px;
+    }
+    #chat-header:hover, #chat-header:active {
+      background: #fff2;
+      color: #fff;
     }
     #chat-messages {
       height: 180px;
@@ -238,13 +250,13 @@
       display: none;
       position: fixed;
       right: 24px; bottom: 24px;
-      border: 2px dashed #fff;
+      border: 2px solid #fff;
       border-radius: 12px 12px 0 0;
       box-shadow: 0 0 8px #000a;
       background: rgba(25,25,25,0.88);
       z-index: 101;
       cursor: pointer;
-      width: 180px;
+      width: 220px;
       transition: all 0.15s;
     }
     .chat-min-header {
@@ -253,19 +265,18 @@
       text-align: center;
       font-size: 1.11em;
       color: #fff;
-      padding: 9px 0 8px 0;
+      padding: 12px 0 12px 0;
       border-radius: 12px 12px 0 0;
       background: rgba(36,36,36,0.85);
-      border-bottom: 2px dashed #fff;
+      border-bottom: 3px dotted #fff; /* dotted white line */
       font-family: 'Comic Sans MS', cursive, sans-serif;
+      user-select: none;
     }
     @media (max-width: 700px) {
-      #left-player, #right-player { display: none; }
       #chat-popup, #chat-minimized { width: 98vw; right: 1vw;}
       #readyBtn, #readyStatus { right: 10vw;}
       #my-hand { max-width: 98vw; }
     }
-    /* --- CHAT CHANGES END --- */
   </style>
 </head>
 <body>
@@ -289,13 +300,11 @@
   <div id="chat-popup">
     <div id="chat-header">
       <span>Chat</span>
-      <span id="chat-close" title="Hide chat" aria-label="Hide chat">&times;</span>
     </div>
     <div id="chat-messages"></div>
     <input id="chat-input" type="text" placeholder="Type..." autocomplete="off" />
     <button id="chat-send">Send</button>
   </div>
-  <!-- Messenger style minimized chat (header only, click to expand) -->
   <div id="chat-minimized" style="display:none;">
     <div class="chat-min-header">Chat</div>
   </div>
@@ -425,13 +434,12 @@
     });
 
     // --- Chat minimize/maximize ---
-    document.getElementById('chat-close').onclick = function(e) {
+    document.getElementById('chat-header').onclick = function() {
       document.getElementById('chat-popup').style.display = 'none';
-      document.getElementById('chat-minimized').style.display = '';
-      e.stopPropagation();
+      document.getElementById('chat-minimized').style.display = 'block';
     };
     document.getElementById('chat-minimized').onclick = function() {
-      document.getElementById('chat-popup').style.display = '';
+      document.getElementById('chat-popup').style.display = 'flex';
       document.getElementById('chat-minimized').style.display = 'none';
     };
 
