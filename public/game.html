@@ -413,6 +413,17 @@
       document.getElementById('readyBtn').disabled = true;
     }
 
+    // --- Emoji logic ---
+    const emojiMap = {
+      ":joy:": `<img src="https://cdn.discordapp.com/emojis/1327562193709043726.png?v=1&size=28&quality=lossless" alt="😂" style="height:1.2em;vertical-align:-0.2em;" draggable="false">`,
+      ":Sob:": `<img src="https://cdn.discordapp.com/emojis/1327572757575106610.png?v=1&size=28&quality=lossless" alt="😭" style="height:1.2em;vertical-align:-0.2em;" draggable="false">`
+    };
+
+    function emojify(text) {
+      const pattern = new RegExp(Object.keys(emojiMap).map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g');
+      return text.replace(pattern, matched => emojiMap[matched] || matched);
+    }
+
     // --- Chat logic ---
     const chatMessages = document.getElementById('chat-messages');
     document.getElementById('chat-send').onclick = sendChat;
@@ -428,7 +439,7 @@
     }
     socket.on('chat-message', ({ name, message }) => {
       const div = document.createElement('div');
-      div.innerHTML = `<b>${name}:</b> ${message}`;
+      div.innerHTML = `<b>${name}:</b> ${emojify(message)}`;
       chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     });
