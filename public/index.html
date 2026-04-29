@@ -1,146 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>tmrflip</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0;
-      background-color: #000;
-      color: white;
-      font-family: 'Comic Sans MS', cursive, sans-serif;
-      overflow: hidden;
+      background: #0a0a0c;
+      color: #f0f0f0;
+      font-family: 'Comic Sans MS', 'Chalkboard SE', cursive, sans-serif;
+      min-height: 100vh;
       display: flex;
-      justify-content: center;
       align-items: center;
-      height: 100vh;
+      justify-content: center;
     }
 
-    .center-box {
-      text-align: center;
-      background-color: rgba(0, 0, 0, 0.7);
-      padding: 40px;
+    .card-wrap {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
       border-radius: 20px;
-      box-shadow: 0 0 20px rgba(255,255,255,0.2);
-      animation: pulse 2s infinite;
+      padding: 48px 52px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      max-width: 440px;
+      width: 90%;
     }
 
-    .center-box h1 {
+    .logo {
       font-size: 3rem;
-      margin-bottom: 10px;
-      color: #ffcc00;
+      font-weight: bold;
+      color: #ffe24a;
+      letter-spacing: 4px;
+      margin-bottom: 6px;
+      text-shadow: 0 0 40px rgba(255,226,74,0.3);
+    }
+    .tagline {
+      font-size: 0.85em;
+      color: #666;
+      margin-bottom: 36px;
+      letter-spacing: 2px;
     }
 
-    .center-box p {
-      font-size: 1.2rem;
-      color: #ccc;
-      margin-bottom: 25px;
+    .step { display: none; }
+    .step.active { display: block; }
+
+    label {
+      display: block;
+      font-size: 0.82em;
+      color: #888;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      text-align: left;
     }
 
-    .btn, .input {
-      margin: 10px;
-      padding: 12px 20px;
-      font-size: 1.2rem;
-      border-radius: 10px;
-      border: none;
-      outline: none;
+    input.inp {
+      width: 100%;
+      padding: 13px 16px;
+      font-size: 1rem;
       font-family: inherit;
+      background: rgba(255,255,255,0.06);
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      color: #f0f0f0;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 16px;
     }
+    input.inp:focus { border-color: #ffe24a; }
+    input.inp::placeholder { color: #555; }
 
     .btn {
-      background-color: red;
-      color: white;
+      width: 100%;
+      padding: 13px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
       cursor: pointer;
-      animation: glow 1.5s infinite alternate;
+      transition: all 0.15s;
+      margin-bottom: 10px;
+    }
+    .btn-primary {
+      background: #ffe24a;
+      color: #111;
+    }
+    .btn-primary:hover { background: #fff; }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      color: #ccc;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.4); }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0 16px;
+      color: #444;
+      font-size: 0.8em;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,255,255,0.08);
     }
 
-    .input {
-      width: 250px;
-      text-align: center;
+    #join-section {
+      display: none;
+      margin-top: 8px;
     }
 
-    @keyframes glow {
-      from { box-shadow: 0 0 10px red; }
-      to { box-shadow: 0 0 20px yellow; }
+    .back-link {
+      display: block;
+      margin-top: 20px;
+      color: #555;
+      font-size: 0.82em;
+      cursor: pointer;
+      text-decoration: none;
     }
+    .back-link:hover { color: #888; }
 
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
+    .rules-hint {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.07);
+      font-size: 0.75em;
+      color: #555;
+      line-height: 1.7;
     }
+    .rules-hint span { color: #777; }
   </style>
 </head>
 <body>
-  <div class="center-box" id="step1">
-    <h1>tmrflip</h1>
-    <p>Enter your name (e.g. Namya)</p>
-    <input type="text" id="nameInput" class="input" placeholder="Enter your name" />
-    <br>
-    <button class="btn" onclick="goToStep2()">Next</button>
+<div class="card-wrap">
+  <div class="logo">tmrflip</div>
+  <div class="tagline">UNO with chaos</div>
+
+  <!-- Step 1: Name -->
+  <div class="step active" id="step1">
+    <label for="nameInput">Your Name</label>
+    <input class="inp" id="nameInput" type="text" placeholder="Enter your name" maxlength="20">
+    <button class="btn btn-primary" onclick="goStep2()">Continue →</button>
   </div>
 
-  <div class="center-box" id="step2" style="display: none;">
-    <h1>tmrflip</h1>
-    <p>Create a new game or join a code</p>
-    <button class="btn" onclick="createCode()">Create Game</button>
-    <button class="btn" onclick="showJoinInput()">Join Code</button>
-    <div id="joinBox" style="margin-top: 20px; display: none;">
-      <input type="text" id="codeInput" class="input" placeholder="Enter 9-digit code (e.g. 532-535-635)" />
+  <!-- Step 2: Create or join -->
+  <div class="step" id="step2">
+    <button class="btn btn-primary" onclick="createGame()">🎮 Create New Game</button>
+    <div class="divider">or</div>
+    <button class="btn btn-secondary" onclick="toggleJoin()">🔗 Join with Code</button>
+
+    <div id="join-section">
       <br>
-      <button class="btn" onclick="joinGame()">Join</button>
+      <label for="codeInput">Game Code</label>
+      <input class="inp" id="codeInput" type="text" placeholder="e.g. 532-535-635" maxlength="11">
+      <button class="btn btn-primary" onclick="joinGame()">Join Game →</button>
+    </div>
+
+    <a class="back-link" onclick="goBack()">← Back</a>
+
+    <div class="rules-hint">
+      <span>Special Cards:</span> 💣 Bomb • 🔄 Swap • 👀 Peek • 🕵️ Steal • ⏭️ Skip All • 🔒 Color Lock • ↺+ Reverse+<br>
+      Press <span>D</span> to draw, <span>T</span> to call TMR!
     </div>
   </div>
+</div>
 
-  <script>
-    let playerName = "";
+<script>
+  let playerName = '';
 
-    function goToStep2() {
-      const name = document.getElementById("nameInput").value.trim();
-      if (!name) return alert("Please enter your name");
-      playerName = name;
-      document.getElementById("step1").style.display = "none";
-      document.getElementById("step2").style.display = "block";
-    }
+  function goStep2() {
+    const name = document.getElementById('nameInput').value.trim();
+    if (!name) return shake('nameInput');
+    playerName = name;
+    document.getElementById('step1').classList.remove('active');
+    document.getElementById('step2').classList.add('active');
+  }
 
-    function createCode() {
-      const code = generateGameCode();
-      const fullLink = `${window.location.origin}/waiting.html?code=${code}&name=${encodeURIComponent(playerName)}`;
-      window.location.href = fullLink;
-    }
+  function goBack() {
+    document.getElementById('step2').classList.remove('active');
+    document.getElementById('step1').classList.add('active');
+  }
 
-    function showJoinInput() {
-      document.getElementById("joinBox").style.display = "block";
-    }
+  function toggleJoin() {
+    const sec = document.getElementById('join-section');
+    sec.style.display = sec.style.display === 'block' ? 'none' : 'block';
+    if (sec.style.display === 'block') document.getElementById('codeInput').focus();
+  }
 
-    function joinGame() {
-      const codeInput = document.getElementById("codeInput").value.trim().replace(/[^0-9]/g, "");
-      if (codeInput.length !== 9) return alert("Enter a valid 9-digit code");
-      const formattedCode = `${codeInput.slice(0,3)}-${codeInput.slice(3,6)}-${codeInput.slice(6)}`;
-      window.location.href = `waiting.html?code=${formattedCode}&name=${encodeURIComponent(playerName)}`;
-    }
+  function createGame() {
+    const code = generateCode();
+    window.location.href = `/waiting.html?code=${code}&name=${enc(playerName)}`;
+  }
 
-    function generateGameCode() {
-      const parts = [];
-      for (let i = 0; i < 3; i++) {
-        parts.push(Math.floor(100 + Math.random() * 900));
-      }
-      return parts.join("-");
-    }
+  function joinGame() {
+    const raw = document.getElementById('codeInput').value.replace(/\D/g,'');
+    if (raw.length !== 9) return shake('codeInput');
+    const code = `${raw.slice(0,3)}-${raw.slice(3,6)}-${raw.slice(6)}`;
+    window.location.href = `/waiting.html?code=${code}&name=${enc(playerName)}&joined=true`;
+  }
 
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Enter") {
-        const step1Visible = document.getElementById("step1").style.display !== "none";
-        const step2Visible = document.getElementById("step2").style.display !== "none";
-        const joinBoxVisible = document.getElementById("joinBox").style.display !== "none";
+  function generateCode() {
+    return [0,0,0].map(() => Math.floor(100+Math.random()*900)).join('-');
+  }
 
-        if (step1Visible) {
-          goToStep2();
-        } else if (step2Visible && joinBoxVisible) {
-          joinGame();
-        }
-      }
-    });
-  </script>
+  function enc(s) { return encodeURIComponent(s); }
+
+  function shake(id) {
+    const el = document.getElementById(id);
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = 'shake 0.35s ease';
+    el.focus();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    if (document.getElementById('step1').classList.contains('active')) goStep2();
+    else if (document.getElementById('join-section').style.display === 'block') joinGame();
+  });
+
+  // Format code input automatically
+  document.getElementById('codeInput').addEventListener('input', function() {
+    let v = this.value.replace(/\D/g,'').slice(0,9);
+    if (v.length > 6) v = v.slice(0,3)+'-'+v.slice(3,6)+'-'+v.slice(6);
+    else if (v.length > 3) v = v.slice(0,3)+'-'+v.slice(3);
+    this.value = v;
+  });
+</script>
+
+<style>
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
+</style>
 </body>
 </html>
